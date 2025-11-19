@@ -1,0 +1,25 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>Karl.Cli</AssemblyName>
+	<RootNamespace>Karl.Cli</RootNamespace>
+	<PackAsTool>true</PackAsTool>
+	<ToolCommandName>karl</ToolCommandName>  
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="ComputerCodeBlue.Csv" Version="1.1.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0" />
+    <PackageReference Include="System.CommandLine" Version="2.0.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Karl.Abstractions\Karl.Abstractions.csproj" />
+    <ProjectReference Include="..\Karl\Karl.csproj" />
+    <ProjectReference Include="..\Karl.Transport.MailKit\Karl.Transport.Smtp.csproj" />
+    <ProjectReference Include="..\Karl.Transport.File\Karl.Transport.File.csproj" />
+    <ProjectReference Include="..\Karl.Template.Scriban\Karl.Templates.Scriban.csproj" />
+    <ProjectReference Include="..\Karl.Extensions.Microsoft\Karl.Extensions.Microsoft.csproj" />
+  </ItemGroup>
+</Project>

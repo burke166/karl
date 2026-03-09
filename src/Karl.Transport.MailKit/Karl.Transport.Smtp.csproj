@@ -8,6 +8,6 @@
     <ProjectReference Include="..\Karl.Abstractions\Karl.Abstractions.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="MailKit" Version="4.14.1" />
+    <PackageReference Include="MailKit" Version="4.15.1" />
   </ItemGroup>
 </Project>

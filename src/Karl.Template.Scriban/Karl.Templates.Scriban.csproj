@@ -8,8 +8,8 @@
     <ProjectReference Include="..\Karl.Abstractions\Karl.Abstractions.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Scriban" Version="6.5.0" />
-    <PackageReference Include="Markdig" Version="0.43.0" />
+    <PackageReference Include="Scriban" Version="6.5.5" />
+    <PackageReference Include="Markdig" Version="1.1.1" />
     <PackageReference Include="PreMailer.Net" Version="2.7.2" />
   </ItemGroup>
 </Project>

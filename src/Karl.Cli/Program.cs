@@ -165,7 +165,7 @@ async Task<int> HandleEmailAsync(ParseResult parseResult, Action<IKarlBuilder, P
     // Transport-specific (SMTP vs file) is injected here
     configureKarlTransport(karlBuilder, parseResult);
 
-    // JSON configuration from the command line, if applicable
+    // JSON configuration from the command line, if applicableN 
     if (!string.IsNullOrWhiteSpace(jsonPathValue) && File.Exists(jsonPathValue))
     {
         karlBuilder.UseConfiguration(jsonPathValue);

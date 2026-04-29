@@ -1,4 +1,5 @@
-using Karl.Templates.Scriban;
+using Karl.Core;
+using Karl.Template.Scriban;
 using Karl.Transport.File;
 using Karl.Transport.Smtp;
 using Karl.Transport.StdOut;

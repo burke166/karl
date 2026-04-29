@@ -2,23 +2,45 @@ using Karl.Models;
 using Markdig;
 using Scriban;
 
-namespace Karl.Templates.Scriban;
+namespace Karl.Template.Scriban;
 
-public class ScribanTemplateRenderer : ITemplateRenderer
+public sealed class ScribanTemplateRenderer : ITemplateRenderer
 {
-    private readonly MarkdownPipeline _markdownPipeline = new MarkdownPipelineBuilder().UseAdvancedExtensions().Build();
+    private readonly MarkdownPipeline _markdownPipeline =
+        new MarkdownPipelineBuilder()
+            .UseAdvancedExtensions()
+            .Build();
 
-    public Task<TemplateRenderResult> RenderAsync(string template, object? model = null, CancellationToken cancellationToken = default)
+    public async Task<TemplateRenderResult> RenderAsync(
+        string template,
+        object? model = null,
+        CancellationToken cancellationToken = default)
     {
-        var scribanTemplate = Template.Parse(template);
-        var rendered = scribanTemplate.Render(model, member => member.Name);
+        cancellationToken.ThrowIfCancellationRequested();
 
-        var html = Markdown.ToHtml(rendered, _markdownPipeline);
-        var text = Markdown.ToPlainText(rendered, _markdownPipeline);
+        var scribanTemplate = global::Scriban.Template.Parse(template);
 
-        var pm = new PreMailer.Net.PreMailer(html);
+        if (scribanTemplate.HasErrors)
+        {
+            var errors = string.Join(Environment.NewLine, scribanTemplate.Messages);
+            throw new InvalidOperationException($"Scriban template parse failed:{Environment.NewLine}{errors}");
+        }
 
-        var result = pm.MoveCssInline(removeStyleElements: false, preserveMediaQueries: true);
-        return Task.FromResult(new TemplateRenderResult(result.Html, text));
+        var renderedMarkdown = await scribanTemplate.RenderAsync(
+            model,
+            member => member.Name);
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var html = Markdown.ToHtml(renderedMarkdown, _markdownPipeline);
+        var text = Markdown.ToPlainText(renderedMarkdown, _markdownPipeline);
+
+        var preMailer = new PreMailer.Net.PreMailer(html);
+
+        var inlineResult = preMailer.MoveCssInline(
+            removeStyleElements: false,
+            preserveMediaQueries: true);
+
+        return new TemplateRenderResult(inlineResult.Html, text);
     }
 }

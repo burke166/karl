@@ -11,16 +11,16 @@
     <PackageOutputPath>./nupkgs</PackageOutputPath>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="ComputerCodeBlue.Csv" Version="1.2.0" />
+    <PackageReference Include="ComputerCodeBlue.Csv" Version="1.2.1" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.7" />
     <PackageReference Include="System.CommandLine" Version="2.0.7" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Karl.Abstractions\Karl.Abstractions.csproj" />
     <ProjectReference Include="..\Karl\Karl.csproj" />
-    <ProjectReference Include="..\Karl.Transport.MailKit\Karl.Transport.Smtp.csproj" />
+    <ProjectReference Include="..\Karl.Transport.Smtp\Karl.Transport.Smtp.csproj" />
     <ProjectReference Include="..\Karl.Transport.File\Karl.Transport.File.csproj" />
-    <ProjectReference Include="..\Karl.Template.Scriban\Karl.Templates.Scriban.csproj" />
+    <ProjectReference Include="..\Karl.Template.Scriban\Karl.Template.Scriban.csproj" />
     <ProjectReference Include="..\Karl.Extensions.Microsoft\Karl.Extensions.Microsoft.csproj" />
   </ItemGroup>
 </Project>

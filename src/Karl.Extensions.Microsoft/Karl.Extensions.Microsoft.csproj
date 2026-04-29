@@ -13,10 +13,10 @@
   <ItemGroup>
     <ProjectReference Include="..\Karl.Abstractions\Karl.Abstractions.csproj" />
     <ProjectReference Include="..\Karl.Core\Karl.Core.csproj" />
-    <ProjectReference Include="..\Karl.Transport.MailKit\Karl.Transport.Smtp.csproj" />
+    <ProjectReference Include="..\Karl.Transport.Smtp\Karl.Transport.Smtp.csproj" />
     <ProjectReference Include="..\Karl.Transport.File\Karl.Transport.File.csproj" />
 	  <ProjectReference Include="..\Karl.Transport.StdOut\Karl.Transport.StdOut.csproj" />
-    <ProjectReference Include="..\Karl.Template.Scriban\Karl.Templates.Scriban.csproj" />
+    <ProjectReference Include="..\Karl.Template.Scriban\Karl.Template.Scriban.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.7" />

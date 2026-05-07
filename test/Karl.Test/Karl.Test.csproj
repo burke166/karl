@@ -1,0 +1,36 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" Version="10.0.0">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.7" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.7" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Karl\Karl.csproj" />
+    <ProjectReference Include="..\..\src\Karl.Cli\Karl.Cli.csproj" />
+    <ProjectReference Include="..\..\src\Karl.Core\Karl.Core.csproj" />
+    <ProjectReference Include="..\..\src\Karl.Extensions.Microsoft\Karl.Extensions.Microsoft.csproj" />
+    <ProjectReference Include="..\..\src\Karl.Template.Scriban\Karl.Template.Scriban.csproj" />
+    <ProjectReference Include="..\..\src\Karl.Transport.File\Karl.Transport.File.csproj" />
+    <ProjectReference Include="..\..\src\Karl.Transport.StdOut\Karl.Transport.StdOut.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -12,7 +12,7 @@
     <DebugType>portable</DebugType>    
 
     <PackageId>Karl.Template.Scriban</PackageId>
-    <Version>1.0.0</Version>
+    <Version>1.1.0</Version>
     <Authors>Christopher Burke</Authors>
     <Title>Karl Scriban Template Engine</Title>
     <Description>Scriban template rendering support for Karl email delivery.</Description>

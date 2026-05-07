@@ -6,7 +6,6 @@ using Karl.Transport.StdOut;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using System.Runtime.InteropServices;
 
 namespace Karl.Extensions.Microsoft;
 
@@ -64,27 +63,13 @@ public static class ServiceCollectionExtensions
         return builder;
     }
 
-    public static IKarlBuilder UseConfiguration(this IKarlBuilder builder, string filePath = "karl.json")
+    public static IKarlBuilder UseConfiguration(this IKarlBuilder builder, IConfiguration configuration)
     {
-        var configBuilder = new ConfigurationBuilder();
+        builder.Services.Configure<SmtpTransportOptions>(
+            configuration.GetSection("Karl:Smtp"));
 
-        string userConfigPath = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
-            ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".karl", "karl.json")
-            : Path.Combine(
-                Environment.GetEnvironmentVariable("XDG_CONFIG_HOME")
-                    ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".config"),
-                "karl", "karl.json");
-
-        if (File.Exists(userConfigPath))
-            configBuilder.AddJsonFile(userConfigPath);
-
-        var localConfig = Path.Combine(Environment.CurrentDirectory, filePath);
-        if (File.Exists(localConfig))
-            configBuilder.AddJsonFile(localConfig);
-
-        configBuilder.AddEnvironmentVariables("KARL_");
-
-        var config = configBuilder.Build();
+        builder.Services.Configure<FileTransportOptions>(
+            configuration.GetSection("Karl:File"));
 
         return builder;
     }

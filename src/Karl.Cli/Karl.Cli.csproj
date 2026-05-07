@@ -9,9 +9,20 @@
 	  <PackAsTool>true</PackAsTool>
 	  <ToolCommandName>karl</ToolCommandName>  
     <PackageOutputPath>./nupkgs</PackageOutputPath>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <DebugType>portable</DebugType>
+    <PackageId>Karl.Cli</PackageId>
+    <Version>1.1.0</Version>
+    <Authors>Christopher Burke</Authors>
+    <Description>Command line tool for sending emails using Karl.</Description>
+    <PackageTags>email;cli;dotnet-tool;smtp;templating;mailkit;scriban;automation;notifications</PackageTags>    
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="ComputerCodeBlue.Csv" Version="1.2.1" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.7" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="10.0.7" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.7" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.7" />
     <PackageReference Include="System.CommandLine" Version="2.0.7" />
   </ItemGroup>

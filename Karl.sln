@@ -11,7 +11,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Karl.Transport.Smtp", "src\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Karl.Transport.File", "src\Karl.Transport.File\Karl.Transport.File.csproj", "{B83DD7BB-1FB4-496F-BE32-472F0DBDC61C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Karl.Templates.Scriban", "src\Karl.Template.Scriban\Karl.Template.Scriban.csproj", "{70010053-8CA7-44A5-BC41-9A40416CCE7F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Karl.Template.Scriban", "src\Karl.Template.Scriban\Karl.Template.Scriban.csproj", "{70010053-8CA7-44A5-BC41-9A40416CCE7F}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Karl.Extensions.Microsoft", "src\Karl.Extensions.Microsoft\Karl.Extensions.Microsoft.csproj", "{088AD920-96C6-4826-A429-892ADF3A90D9}"
 EndProject
@@ -22,6 +22,10 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{827E0CD3-B72D-47B6-A68D-7590B98EB39B}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Karl.Core", "src\Karl.Core\Karl.Core.csproj", "{1DB85E58-653B-46D0-9CE2-487DDD1BCBD2}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{0C88DD14-F956-CE84-757C-A364CCF449FC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Karl.Test", "test\Karl.Test\Karl.Test.csproj", "{47DF6239-EC77-46DA-8018-150C71485BC2}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -141,12 +145,25 @@ Global
 		{1DB85E58-653B-46D0-9CE2-487DDD1BCBD2}.Release|x64.Build.0 = Release|Any CPU
 		{1DB85E58-653B-46D0-9CE2-487DDD1BCBD2}.Release|x86.ActiveCfg = Release|Any CPU
 		{1DB85E58-653B-46D0-9CE2-487DDD1BCBD2}.Release|x86.Build.0 = Release|Any CPU
+		{47DF6239-EC77-46DA-8018-150C71485BC2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{47DF6239-EC77-46DA-8018-150C71485BC2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{47DF6239-EC77-46DA-8018-150C71485BC2}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{47DF6239-EC77-46DA-8018-150C71485BC2}.Debug|x64.Build.0 = Debug|Any CPU
+		{47DF6239-EC77-46DA-8018-150C71485BC2}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{47DF6239-EC77-46DA-8018-150C71485BC2}.Debug|x86.Build.0 = Debug|Any CPU
+		{47DF6239-EC77-46DA-8018-150C71485BC2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{47DF6239-EC77-46DA-8018-150C71485BC2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{47DF6239-EC77-46DA-8018-150C71485BC2}.Release|x64.ActiveCfg = Release|Any CPU
+		{47DF6239-EC77-46DA-8018-150C71485BC2}.Release|x64.Build.0 = Release|Any CPU
+		{47DF6239-EC77-46DA-8018-150C71485BC2}.Release|x86.ActiveCfg = Release|Any CPU
+		{47DF6239-EC77-46DA-8018-150C71485BC2}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{1DB85E58-653B-46D0-9CE2-487DDD1BCBD2} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
+		{47DF6239-EC77-46DA-8018-150C71485BC2} = {0C88DD14-F956-CE84-757C-A364CCF449FC}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {486EFC62-3EE6-4B74-A52A-DC520B7BE885}

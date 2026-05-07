@@ -9,8 +9,10 @@ public class StdOutEmailTransport : IEmailTransport
     {
     }
 
-    public async Task SendAsync(EmailMessage message, CancellationToken cancellationToken = default)
+    public Task SendAsync(EmailMessage message, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(message);
+
         var sb = new StringBuilder();
         sb.AppendLine($"From: {message.From}");
         sb.AppendLine($"To: {string.Join(", ", message.To)}");
@@ -33,5 +35,6 @@ public class StdOutEmailTransport : IEmailTransport
         }
 
         Console.WriteLine(sb.ToString());
+        return Task.CompletedTask;
     }
 }

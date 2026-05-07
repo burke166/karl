@@ -1,6 +1,5 @@
 using Karl.Models;
 using MimeKit;
-using MailKit.Net.Smtp;
 using MailKit.Security;
 
 namespace Karl.Transport.Smtp;
@@ -8,14 +7,23 @@ namespace Karl.Transport.Smtp;
 public class SmtpTransport : IEmailTransport
 {
     private readonly SmtpTransportOptions _options;
+    private readonly ISmtpClientFactory _smtpClientFactory;
 
     public SmtpTransport(SmtpTransportOptions options)
+        : this(options, new MailKitSmtpClientFactory())
     {
-        _options = options;
+    }
+
+    internal SmtpTransport(SmtpTransportOptions options, ISmtpClientFactory smtpClientFactory)
+    {
+        _options = options ?? throw new ArgumentNullException(nameof(options));
+        _smtpClientFactory = smtpClientFactory ?? throw new ArgumentNullException(nameof(smtpClientFactory));
     }
 
     public async Task SendAsync(EmailMessage message, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(message);
+
         var mimeMessage = new MimeMessage();
 
         mimeMessage.From.Add(new MailboxAddress(message.From.Name ?? string.Empty, message.From.Address));
@@ -45,37 +53,36 @@ public class SmtpTransport : IEmailTransport
 
         mimeMessage.Body = bodyBuilder.ToMessageBody();
 
-        using var client = new SmtpClient();
-
-        var secureSocketOptions = SecureSocketOptions.StartTls;
-
-        switch (_options.SecurityMode.ToLower())
+        var secureSocketOptions = _options.SecurityMode.ToLowerInvariant() switch
         {
-            case "none":
-                secureSocketOptions = SecureSocketOptions.None;
-                break;
-            case "implicittls":
-                secureSocketOptions = SecureSocketOptions.SslOnConnect;
-                break;
-            case "starttlsrequired":
-                secureSocketOptions = SecureSocketOptions.StartTls;
-                break;
-            case "starttlswhenavailable":
-                secureSocketOptions = SecureSocketOptions.StartTlsWhenAvailable;
-                break;
-            default:
-                secureSocketOptions = SecureSocketOptions.StartTls;
-                break;
-        }
+            "none" => SecureSocketOptions.None,
+            "implicittls" => SecureSocketOptions.SslOnConnect,
+            "starttlsrequired" => SecureSocketOptions.StartTls,
+            "starttlswhenavailable" => SecureSocketOptions.StartTlsWhenAvailable,
+            _ => SecureSocketOptions.StartTls
+        };
 
-        await client.ConnectAsync(_options.Host, _options.Port, secureSocketOptions, cancellationToken);
+        using var client = _smtpClientFactory.Create();
+        var isConnected = false;
 
-        if (!string.IsNullOrEmpty(_options.Username))
+        try
         {
-            await client.AuthenticateAsync(_options.Username, _options.Password ?? string.Empty, cancellationToken);
-        }
+            await client.ConnectAsync(_options.Host, _options.Port, secureSocketOptions, cancellationToken);
+            isConnected = true;
 
-        await client.SendAsync(mimeMessage, cancellationToken);
-        await client.DisconnectAsync(true, cancellationToken);
+            if (!string.IsNullOrEmpty(_options.Username))
+            {
+                await client.AuthenticateAsync(_options.Username, _options.Password ?? string.Empty, cancellationToken);
+            }
+
+            await client.SendAsync(mimeMessage, cancellationToken);
+        }
+        finally
+        {
+            if (isConnected)
+            {
+                await client.DisconnectAsync(true, cancellationToken);
+            }
+        }
     }
 }

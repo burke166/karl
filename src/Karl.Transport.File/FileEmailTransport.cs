@@ -14,6 +14,8 @@ public class FileEmailTransport : IEmailTransport
 
     public async Task SendAsync(EmailMessage message, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(message);
+
         Directory.CreateDirectory(_options.DirectoryPath);
 
         var timestamp = DateTimeOffset.UtcNow.ToString("yyyyMMdd_HHmmss_fff");

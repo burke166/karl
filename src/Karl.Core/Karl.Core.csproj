@@ -7,6 +7,9 @@
 
     <IsPackable>true</IsPackable>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <DebugType>portable</DebugType>  
 
     <PackageId>Karl.Core</PackageId>
     <Version>1.1.0</Version>

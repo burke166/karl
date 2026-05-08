@@ -29,7 +29,7 @@ public static class KarlCliCommandFactory
         var fileExists = factoryOptions?.FileExists ?? File.Exists;
         var readAllText = factoryOptions?.ReadAllText ?? File.ReadAllText;
 
-        var root = new RootCommand("Karl CLI - The Mailman Delivers");
+        var root = new RootCommand("karl", "Karl CLI - The Mailman Delivers");
         var send = new Command("send", "Sends email using SMTP transport.");
         var file = new Command("file", "Outputs to a file instead of sending email. Useful for diagnostics.");
         var preview = new Command("preview", "Outputs to stdout instead of sending email. Useful for diagnostics.");

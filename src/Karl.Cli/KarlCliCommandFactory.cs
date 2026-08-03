@@ -2,6 +2,7 @@ using System.CommandLine;
 using System.CommandLine.Parsing;
 using System.Text;
 using System.Text.Json;
+using ComputerCodeBlue.Csv;
 using Karl.Extensions.Microsoft;
 using Karl.Models;
 using Microsoft.Extensions.Configuration;
@@ -101,6 +102,24 @@ public static class KarlCliCommandFactory
             Required = false
         };
 
+        var csvPath = new Option<string?>("--csv")
+        {
+            Description = "Path to a CSV file for mass email; each row is one recipient. Switches the command into batch mode.",
+            Required = false
+        };
+
+        var toColumn = new Option<string?>("--to-column")
+        {
+            Description = "Name of the CSV column holding the recipient email address. Required when --csv is provided.",
+            Required = false
+        };
+
+        var nameColumn = new Option<string?>("--name-column")
+        {
+            Description = "Name of the CSV column holding the recipient's display name.",
+            Required = false
+        };
+
         var smtpHost = new Option<string>("--smtp-host", ["-h", "--host"])
         {
             Description = "SMTP host",
@@ -152,6 +171,9 @@ public static class KarlCliCommandFactory
             command.Options.Add(layout);
             command.Options.Add(layoutDataPath);
             command.Options.Add(cssPath);
+            command.Options.Add(csvPath);
+            command.Options.Add(toColumn);
+            command.Options.Add(nameColumn);
         }
 
         AddCommonOptions(file);
@@ -166,7 +188,7 @@ public static class KarlCliCommandFactory
 
         AddCommonOptions(preview);
 
-        async Task<int> HandleEmailAsync(ParseResult parseResult, Action<IKarlBuilder, ParseResult> configureKarlTransport)
+        async Task<int> HandleEmailAsync(ParseResult parseResult, CancellationToken cancellationToken, Action<IKarlBuilder, ParseResult> configureKarlTransport)
         {
             var verboseValue = parseResult.GetValue(verbose);
             var fromValue = parseResult.GetValue(from);
@@ -176,6 +198,10 @@ public static class KarlCliCommandFactory
             var markdownPathValue = parseResult.GetValue(markdownPath);
             var bodyValue = parseResult.GetValue(body);
             var modelPathValue = parseResult.GetValue(modelPath);
+            var csvPathValue = parseResult.GetValue(csvPath);
+            var toColumnValue = parseResult.GetValue(toColumn);
+            var nameColumnValue = parseResult.GetValue(nameColumn);
+            var isCsvBatch = !string.IsNullOrWhiteSpace(csvPathValue);
 
             if (verboseValue)
             {
@@ -191,7 +217,24 @@ public static class KarlCliCommandFactory
             factoryOptions?.ConfigureServices?.Invoke(services);
 
             var errors = new StringBuilder();
-            if (string.IsNullOrEmpty(toValue))
+            if (isCsvBatch)
+            {
+                if (!string.IsNullOrEmpty(toValue))
+                {
+                    errors.AppendLine("--to is not used in CSV batch mode; the recipient comes from --to-column in each row.");
+                }
+
+                if (!string.IsNullOrWhiteSpace(modelPathValue))
+                {
+                    errors.AppendLine("--csv and --model cannot be combined yet; see docs for planned per-row + shared token merging.");
+                }
+
+                if (string.IsNullOrWhiteSpace(toColumnValue))
+                {
+                    errors.AppendLine("--to-column is required when --csv is provided.");
+                }
+            }
+            else if (string.IsNullOrEmpty(toValue))
             {
                 errors.AppendLine("No to address was provided.");
             }
@@ -217,14 +260,6 @@ public static class KarlCliCommandFactory
             var emailService = provider.GetRequiredService<IEmailService>();
             var renderer = provider.GetRequiredService<ITemplateRenderer>();
 
-            var modelJson = "{}";
-            if (!string.IsNullOrWhiteSpace(modelPathValue) && fileExists(modelPathValue))
-            {
-                modelJson = readAllText(modelPathValue);
-            }
-
-            var model = JsonSerializer.Deserialize<object>(modelJson);
-
             var markdownText = string.Empty;
             if (!string.IsNullOrWhiteSpace(markdownPathValue) && fileExists(markdownPathValue))
             {
@@ -242,30 +277,106 @@ public static class KarlCliCommandFactory
                 return 1;
             }
 
-            var renderedSubject = await renderer.RenderAsync(subjectValue ?? string.Empty, model);
-            var renderedBody = await renderer.RenderAsync(markdownText, model);
-
-            var message = new EmailMessage
+            async Task<EmailMessage> RenderMessageAsync(object? templateModel, string toAddress, string? toName)
             {
-                To =
+                var renderedSubject = await renderer.RenderAsync(subjectValue ?? string.Empty, templateModel, cancellationToken);
+                var renderedBody = await renderer.RenderAsync(markdownText, templateModel, cancellationToken);
+
+                return new EmailMessage
                 {
-                    new EmailAddress(toValue ?? string.Empty)
-                },
-                From = new EmailAddress(fromValue ?? string.Empty),
-                Subject = renderedSubject.Text,
-                Body = new EmailBody
+                    To =
+                    {
+                        new EmailAddress(toAddress, toName)
+                    },
+                    From = new EmailAddress(fromValue ?? string.Empty),
+                    Subject = renderedSubject.Text,
+                    Body = new EmailBody
+                    {
+                        Text = renderedBody.Text,
+                        Html = renderedBody.Html
+                    }
+                };
+            }
+
+            if (isCsvBatch)
+            {
+                IReadOnlyList<IDictionary<string, string>> rows;
+                try
                 {
-                    Text = renderedBody.Text,
-                    Html = renderedBody.Html
+                    rows = CsvFile.ReadDynamic(csvPathValue!).ToList();
                 }
-            };
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    writeLine($"Could not read CSV file '{csvPathValue}': {ex.Message}");
+                    return 1;
+                }
+
+                if (rows.Count > 0 && !rows[0].ContainsKey(toColumnValue!))
+                {
+                    writeLine($"--to-column '{toColumnValue}' was not found in the CSV header row.");
+                    return 1;
+                }
+
+                var sent = 0;
+                var failed = 0;
+                var skipped = 0;
+
+                for (var i = 0; i < rows.Count; i++)
+                {
+                    var rowNumber = i + 1;
+                    var row = rows[i];
+
+                    if (!row.TryGetValue(toColumnValue!, out var rowToValue) || string.IsNullOrWhiteSpace(rowToValue))
+                    {
+                        skipped++;
+                        writeLine($"[{rowNumber}/{rows.Count}] Skipping row: '{toColumnValue}' is blank.");
+                        continue;
+                    }
+
+                    string? rowToName = null;
+                    if (!string.IsNullOrWhiteSpace(nameColumnValue) && row.TryGetValue(nameColumnValue, out var rowNameValue) && !string.IsNullOrWhiteSpace(rowNameValue))
+                    {
+                        rowToName = rowNameValue;
+                    }
+
+                    if (verboseValue)
+                    {
+                        writeLine($"[{rowNumber}/{rows.Count}] Sending to {rowToValue}...");
+                    }
+
+                    try
+                    {
+                        var rowMessage = await RenderMessageAsync(row, rowToValue, rowToName);
+                        await emailService.SendAsync(rowMessage, cancellationToken);
+                        sent++;
+                    }
+                    catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+                    {
+                        failed++;
+                        writeLine($"[{rowNumber}/{rows.Count}] Failed to send to {rowToValue}: {ex.Message}");
+                    }
+                }
+
+                writeLine($"Sent {sent} of {rows.Count} emails from {csvPathValue} ({skipped} skipped, {failed} failed).");
+
+                return failed > 0 || skipped > 0 ? 1 : 0;
+            }
+
+            var modelJson = "{}";
+            if (!string.IsNullOrWhiteSpace(modelPathValue) && fileExists(modelPathValue))
+            {
+                modelJson = readAllText(modelPathValue);
+            }
+
+            var model = JsonSerializer.Deserialize<object>(modelJson);
+            var message = await RenderMessageAsync(model, toValue ?? string.Empty, null);
 
             if (verboseValue)
             {
                 writeLine("Sending email...");
             }
 
-            await emailService.SendAsync(message);
+            await emailService.SendAsync(message, cancellationToken);
 
             if (verboseValue)
             {
@@ -275,8 +386,8 @@ public static class KarlCliCommandFactory
             return 0;
         }
 
-        file.SetAction(parseResult =>
-            HandleEmailAsync(parseResult, (builder, pr) =>
+        file.SetAction((parseResult, cancellationToken) =>
+            HandleEmailAsync(parseResult, cancellationToken, (builder, pr) =>
             {
                 var outputValue = pr.GetValue(output) ?? "emails";
 
@@ -288,8 +399,8 @@ public static class KarlCliCommandFactory
             })
         );
 
-        send.SetAction(parseResult =>
-            HandleEmailAsync(parseResult, (builder, pr) =>
+        send.SetAction((parseResult, cancellationToken) =>
+            HandleEmailAsync(parseResult, cancellationToken, (builder, pr) =>
             {
                 var smtpHostValue = pr.GetValue(smtpHost);
                 var smtpPortValue = pr.GetValue(smtpPort);
@@ -308,14 +419,14 @@ public static class KarlCliCommandFactory
             })
         );
 
-        preview.SetAction(parseResult =>
-            HandleEmailAsync(parseResult, (builder, _) => builder.UseStdOut())
+        preview.SetAction((parseResult, cancellationToken) =>
+            HandleEmailAsync(parseResult, cancellationToken, (builder, _) => builder.UseStdOut())
         );
 
         root.Add(send);
         root.Add(file);
         root.Add(preview);
-        
-        return root; 
+
+        return root;
    }
 }

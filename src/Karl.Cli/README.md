@@ -80,6 +80,45 @@ karl send \
   --tls StartTlsRequired
 ```
 
+## Mass Email Using a CSV File
+
+`send`, `file`, and `preview` all accept `--csv` to send one personalized email
+per row of a CSV file instead of a single message. Every CSV value is a string
+that can be substituted into `--subject`/`--body`/`--markdown` templates — this
+is token replacement, not typed data binding.
+
+```bash
+karl send \
+  --from noreply@example.com \
+  --smtp-host smtp.example.com \
+  --csv contacts.csv \
+  --to-column Email \
+  --name-column Name \
+  --subject "Welcome {{FirstName}}" \
+  --markdown ./welcome.md
+```
+
+```csv
+Email,FirstName,Name
+alice@example.com,Alice,Alice Smith
+bob@example.com,Bob,Bob Jones
+```
+
+* `--to-column` (required with `--csv`) names the CSV column holding the
+  recipient's email address.
+* `--name-column` (optional) names the CSV column holding the recipient's
+  display name. If omitted, or blank for a row, the email address is used with
+  no display name.
+* `--to` and `--model` cannot be combined with `--csv` — the recipient and the
+  per-row template values both come from the CSV.
+* A row with a blank `--to-column` value is skipped, not sent. Failed sends are
+  logged and counted, and the batch continues to the next row. A summary line
+  reports the outcome: `Sent 48 of 50 emails from contacts.csv (1 skipped, 1 failed).`
+
+**Token names are case-sensitive and must match the CSV header (or `--model`
+JSON property) exactly** — a column named `FirstName` only satisfies
+`{{FirstName}}` in a template, not `{{firstname}}` or `{{first_name}}`.
+
 ## File Output Mode
 
 ```bash

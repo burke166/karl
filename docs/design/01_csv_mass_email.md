@@ -1,6 +1,6 @@
 # Design: CSV-Driven Mass Email for Karl.Cli
 
-Status: Proposal
+Status: Implemented
 Owner: Karl.Cli
 Related packages: `Karl.Cli`, `Karl.Template.Scriban`, `ComputerCodeBlue.Csv` >= 1.3.0 (external, same author)
 

@@ -241,6 +241,233 @@ public class KarlCliCommandTests
     }
 
     [Fact]
+    public async Task Preview_Csv_SendsOneEmailPerRow_WithTokensSubstituted()
+    {
+        var tempDir = CreateTempDirectory();
+
+        try
+        {
+            var csvPath = Path.Combine(tempDir, "contacts.csv");
+            await File.WriteAllTextAsync(csvPath, "Email,FirstName\r\nalice@example.com,Alice\r\nbob@example.com,Bob\r\n");
+
+            var capture = new CaptureSink();
+            var exitCode = await InvokeAsync(
+                ["preview", "--from", "from@example.com", "--subject", "Hi {{FirstName}}", "--body", "Body for {{FirstName}}", "--csv", csvPath, "--to-column", "Email"],
+                CreateCaptureOptions(capture));
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal(2, capture.SentMessages.Count);
+            Assert.Equal("alice@example.com", capture.SentMessages[0].To[0].Address);
+            Assert.Equal("Hi Alice", capture.SentMessages[0].Subject.Trim());
+            Assert.Equal("bob@example.com", capture.SentMessages[1].To[0].Address);
+            Assert.Equal("Hi Bob", capture.SentMessages[1].Subject.Trim());
+        }
+        finally
+        {
+            DeleteDirectory(tempDir);
+        }
+    }
+
+    [Fact]
+    public async Task Preview_Csv_MissingToColumnHeader_ReturnsExitCode1WithClearError()
+    {
+        var tempDir = CreateTempDirectory();
+
+        try
+        {
+            var csvPath = Path.Combine(tempDir, "contacts.csv");
+            await File.WriteAllTextAsync(csvPath, "Email,FirstName\r\nalice@example.com,Alice\r\n");
+
+            var output = new StringWriter();
+            var exitCode = await InvokeAsync(
+                ["preview", "--from", "from@example.com", "--subject", "Subject", "--body", "Body", "--csv", csvPath, "--to-column", "NotAColumn"],
+                new KarlCliCommandFactoryOptions { Write = output.Write, WriteLine = output.WriteLine });
+
+            Assert.Equal(1, exitCode);
+            Assert.Contains("NotAColumn", output.ToString());
+        }
+        finally
+        {
+            DeleteDirectory(tempDir);
+        }
+    }
+
+    [Fact]
+    public async Task Preview_Csv_HeaderOnlyZeroRows_ReturnsExitCode0WithZeroSentSummary()
+    {
+        var tempDir = CreateTempDirectory();
+
+        try
+        {
+            var csvPath = Path.Combine(tempDir, "contacts.csv");
+            await File.WriteAllTextAsync(csvPath, "Email,FirstName\r\n");
+
+            var output = new StringWriter();
+            var exitCode = await InvokeAsync(
+                ["preview", "--from", "from@example.com", "--subject", "Subject", "--body", "Body", "--csv", csvPath, "--to-column", "Email"],
+                new KarlCliCommandFactoryOptions { Write = output.Write, WriteLine = output.WriteLine });
+
+            Assert.Equal(0, exitCode);
+            Assert.Contains("Sent 0 of 0 emails", output.ToString());
+        }
+        finally
+        {
+            DeleteDirectory(tempDir);
+        }
+    }
+
+    [Fact]
+    public async Task Preview_Csv_SkipsRowsWithBlankRecipient_AndReportsSkippedCount()
+    {
+        var tempDir = CreateTempDirectory();
+
+        try
+        {
+            var csvPath = Path.Combine(tempDir, "contacts.csv");
+            await File.WriteAllTextAsync(csvPath, "Email,FirstName\r\nalice@example.com,Alice\r\n,Bob\r\n");
+
+            var capture = new CaptureSink();
+            var output = new StringWriter();
+            var exitCode = await InvokeAsync(
+                ["preview", "--from", "from@example.com", "--subject", "Subject", "--body", "Body", "--csv", csvPath, "--to-column", "Email"],
+                CreateCaptureOptions(capture, output));
+
+            Assert.Equal(1, exitCode);
+            Assert.Single(capture.SentMessages);
+            Assert.Contains("Sent 1 of 2 emails", output.ToString());
+            Assert.Contains("1 skipped", output.ToString());
+        }
+        finally
+        {
+            DeleteDirectory(tempDir);
+        }
+    }
+
+    [Fact]
+    public async Task Preview_CsvAndModel_ReturnsExitCode1()
+    {
+        var tempDir = CreateTempDirectory();
+
+        try
+        {
+            var csvPath = Path.Combine(tempDir, "contacts.csv");
+            await File.WriteAllTextAsync(csvPath, "Email\r\nalice@example.com\r\n");
+            var modelPath = Path.Combine(tempDir, "model.json");
+            await File.WriteAllTextAsync(modelPath, "{}");
+
+            var output = new StringWriter();
+            var exitCode = await InvokeAsync(
+                ["preview", "--from", "from@example.com", "--subject", "Subject", "--body", "Body", "--csv", csvPath, "--to-column", "Email", "--model", modelPath],
+                new KarlCliCommandFactoryOptions { Write = output.Write, WriteLine = output.WriteLine });
+
+            Assert.Equal(1, exitCode);
+            Assert.Contains("--csv and --model cannot be combined", output.ToString());
+        }
+        finally
+        {
+            DeleteDirectory(tempDir);
+        }
+    }
+
+    [Fact]
+    public async Task Preview_CsvAndTo_ReturnsExitCode1()
+    {
+        var tempDir = CreateTempDirectory();
+
+        try
+        {
+            var csvPath = Path.Combine(tempDir, "contacts.csv");
+            await File.WriteAllTextAsync(csvPath, "Email\r\nalice@example.com\r\n");
+
+            var output = new StringWriter();
+            var exitCode = await InvokeAsync(
+                ["preview", "--from", "from@example.com", "--to", "someone@example.com", "--subject", "Subject", "--body", "Body", "--csv", csvPath, "--to-column", "Email"],
+                new KarlCliCommandFactoryOptions { Write = output.Write, WriteLine = output.WriteLine });
+
+            Assert.Equal(1, exitCode);
+            Assert.Contains("--to is not used in CSV batch mode", output.ToString());
+        }
+        finally
+        {
+            DeleteDirectory(tempDir);
+        }
+    }
+
+    [Fact]
+    public async Task File_Csv_CreatesOneFileForEachRow()
+    {
+        var tempDir = CreateTempDirectory();
+
+        try
+        {
+            var csvPath = Path.Combine(tempDir, "contacts.csv");
+            await File.WriteAllTextAsync(csvPath, "Email,FirstName\r\nalice@example.com,Alice\r\nbob@example.com,Bob\r\n");
+            var outputDir = Path.Combine(tempDir, "out");
+
+            var exitCode = await InvokeAsync(
+                ["file", "--from", "from@example.com", "--subject", "Hi {{FirstName}}", "--body", "Body for {{FirstName}}", "--csv", csvPath, "--to-column", "Email", "--output", outputDir]);
+
+            Assert.Equal(0, exitCode);
+            Assert.True(Directory.Exists(outputDir));
+            Assert.Equal(2, Directory.GetFiles(outputDir, "*.txt").Length);
+        }
+        finally
+        {
+            DeleteDirectory(tempDir);
+        }
+    }
+
+    [Fact]
+    public async Task Send_Csv_ContinuesAfterOneRowFails_AndReturnsExitCode1()
+    {
+        var tempDir = CreateTempDirectory();
+
+        try
+        {
+            var csvPath = Path.Combine(tempDir, "contacts.csv");
+            await File.WriteAllTextAsync(csvPath, "Email,FirstName\r\nalice@example.com,Alice\r\nbob@example.com,Bob\r\ncarol@example.com,Carol\r\n");
+
+            var capture = new CaptureSink { FailOnToAddress = "bob@example.com" };
+            var output = new StringWriter();
+            var exitCode = await InvokeAsync(
+                ["send", "--from", "from@example.com", "--subject", "Hi {{FirstName}}", "--body", "Body for {{FirstName}}", "--csv", csvPath, "--to-column", "Email", "--smtp-host", "smtp.example.com"],
+                CreateCaptureOptions(capture, output));
+
+            Assert.Equal(1, exitCode);
+            Assert.Equal(2, capture.SentMessages.Count);
+            Assert.Contains("Sent 2 of 3 emails", output.ToString());
+            Assert.Contains("1 failed", output.ToString());
+        }
+        finally
+        {
+            DeleteDirectory(tempDir);
+        }
+    }
+
+    [Fact]
+    public async Task Preview_Csv_MissingFile_ReturnsExitCode1WithClearError()
+    {
+        var tempDir = CreateTempDirectory();
+
+        try
+        {
+            var missingPath = Path.Combine(tempDir, "does-not-exist.csv");
+
+            var output = new StringWriter();
+            var exitCode = await InvokeAsync(
+                ["preview", "--from", "from@example.com", "--subject", "Subject", "--body", "Body", "--csv", missingPath, "--to-column", "Email"],
+                new KarlCliCommandFactoryOptions { Write = output.Write, WriteLine = output.WriteLine });
+
+            Assert.Equal(1, exitCode);
+            Assert.Contains("Could not read CSV file", output.ToString());
+        }
+        finally
+        {
+            DeleteDirectory(tempDir);
+        }
+    }
+
+    [Fact]
     public async Task RootHelp_ShowsExpectedCommands()
     {
         var output = await InvokeWithConsoleCaptureAsync(["--help"]);
@@ -250,9 +477,9 @@ public class KarlCliCommandTests
     }
 
     [Theory]
-    [InlineData("preview", "--from", "--to", "--subject", "--body", "--markdown", "--model", "--json", "--layout", "--layout-data", "--css", "--verbose")]
-    [InlineData("file", "--from", "--to", "--subject", "--body", "--markdown", "--model", "--json", "--layout", "--layout-data", "--css", "--verbose", "--output")]
-    [InlineData("send", "--from", "--to", "--subject", "--body", "--markdown", "--model", "--json", "--layout", "--layout-data", "--css", "--verbose", "--smtp-host", "--smtp-port", "--username", "--password", "-tls")]
+    [InlineData("preview", "--from", "--to", "--subject", "--body", "--markdown", "--model", "--json", "--layout", "--layout-data", "--css", "--csv", "--to-column", "--name-column", "--verbose")]
+    [InlineData("file", "--from", "--to", "--subject", "--body", "--markdown", "--model", "--json", "--layout", "--layout-data", "--css", "--csv", "--to-column", "--name-column", "--verbose", "--output")]
+    [InlineData("send", "--from", "--to", "--subject", "--body", "--markdown", "--model", "--json", "--layout", "--layout-data", "--css", "--csv", "--to-column", "--name-column", "--verbose", "--smtp-host", "--smtp-port", "--username", "--password", "-tls")]
     public async Task CommandHelp_ShowsExpectedOptions(string commandName, params string[] expectedOptions)
     {
         var output = await InvokeWithConsoleCaptureAsync([commandName, "--help"]);
@@ -263,7 +490,7 @@ public class KarlCliCommandTests
         }
     }
 
-    private static KarlCliCommandFactoryOptions CreateCaptureOptions(CaptureSink capture)
+    private static KarlCliCommandFactoryOptions CreateCaptureOptions(CaptureSink capture, StringWriter? output = null)
     {
         return new KarlCliCommandFactoryOptions
         {
@@ -271,7 +498,9 @@ public class KarlCliCommandTests
             {
                 services.AddSingleton(capture);
                 services.AddSingleton<IEmailService, CapturingEmailService>();
-            }
+            },
+            Write = output is null ? null : output.Write,
+            WriteLine = output is null ? null : output.WriteLine
         };
     }
 
@@ -336,6 +565,8 @@ public class KarlCliCommandTests
     {
         public EmailMessage? LastMessage { get; set; }
         public SmtpTransportOptions? LastSmtpOptions { get; set; }
+        public List<EmailMessage> SentMessages { get; } = new();
+        public string? FailOnToAddress { get; set; }
     }
 
     private sealed class CapturingEmailService : IEmailService
@@ -351,7 +582,13 @@ public class KarlCliCommandTests
 
         public Task SendAsync(EmailMessage message, CancellationToken cancellationToken = default)
         {
+            if (_capture.FailOnToAddress is not null && message.To.Any(address => address.Address == _capture.FailOnToAddress))
+            {
+                throw new InvalidOperationException($"Simulated failure for {_capture.FailOnToAddress}");
+            }
+
             _capture.LastMessage = message;
+            _capture.SentMessages.Add(message);
             var smtpOptions = _serviceProvider.GetService<IOptions<SmtpTransportOptions>>();
             if (smtpOptions is not null)
             {

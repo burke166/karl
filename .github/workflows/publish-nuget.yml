@@ -1,0 +1,43 @@
+name: Publish to NuGet.org
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Restore
+        run: dotnet restore Karl.sln
+
+      - name: Build
+        run: dotnet build Karl.sln --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test Karl.sln --configuration Release --no-build
+
+      # Karl.sln has 10 projects; Karl.Test sets IsPackable=false and is skipped
+      # automatically, leaving the 9 packable projects: Karl.Cli (a dotnet tool)
+      # plus the 8 Karl.* library packages (Karl itself is the "install everything"
+      # convenience package; the rest can be installed individually).
+      - name: Pack
+        run: >
+          dotnet pack Karl.sln
+          --configuration Release --no-build --output artifacts/nupkgs
+
+      # NuGet.org auto-pushes the matching .snupkg alongside its .nupkg, so a separate
+      # symbol push step isn't needed here - same behavior relied on for ComputerCodeBlue.Csv.
+      - name: Push packages to NuGet.org
+        run: >
+          dotnet nuget push "artifacts/nupkgs/*.nupkg"
+          --api-key ${{ secrets.NUGET_API_KEY }}
+          --source https://api.nuget.org/v3/index.json
+          --skip-duplicate

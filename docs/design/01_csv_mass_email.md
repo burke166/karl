@@ -2,7 +2,18 @@
 
 Status: Proposal
 Owner: Karl.Cli
-Related packages: `Karl.Cli`, `Karl.Template.Scriban`, `ComputerCodeBlue.Csv` (external, same author)
+Related packages: `Karl.Cli`, `Karl.Template.Scriban`, `ComputerCodeBlue.Csv` >= 1.3.0 (external, same author)
+
+> **Revision note:** The original version of this proposal recommended using
+> CsvHelper directly in `Karl.Cli` and *not* routing through
+> `ComputerCodeBlue.Csv`, because at the time that package only exposed
+> `Read<T>`/`Write<T>` — both requiring a fixed record type, which doesn't fit a
+> mass-mail CSV's arbitrary columns (§3 explains why). `ComputerCodeBlue.Csv`
+> 1.3.0 adds `CsvFile.ReadDynamic`, which returns exactly the loosely-typed
+> `Dictionary<string, string>` per row this feature needs. This revision
+> replaces the hand-rolled CsvHelper reader with that API. `Karl.Cli` has been
+> bumped from `ComputerCodeBlue.Csv` 1.2.1 to 1.3.0
+> (`src/Karl.Cli/Karl.Cli.csproj`) to pick it up.
 
 ## 1. Goal
 
@@ -34,7 +45,7 @@ Before designing the CSV path it's worth understanding *why* `--model` works tod
 because the CSV design deliberately rides the same mechanism rather than inventing
 a new one.
 
-`KarlCliCommandFactory.HandleEmailAsync` (`src/Karl.Cli/KarlCliCommandFactory.cs:219-225`)
+`KarlCliCommandFactory.HandleEmailAsync` (`src/Karl.Cli/KarlCliCommandFactory.cs:220-226,245-246`)
 does:
 
 ```csharp
@@ -95,17 +106,21 @@ interface changes**, because Scriban's `Import` already special-cases
 method). A `Dictionary<string, string>` implements the non-generic
 `System.Collections.IDictionary`, so it hits `ImportDictionary`, which copies
 `entry.Key.ToString() -> entry.Value` into the `ScriptObject` — same shape of
-outcome as the JSON path, no new rendering code needed.
+outcome as the JSON path, no new rendering code needed. This holds regardless of
+whether the row is built by hand or comes back from `ComputerCodeBlue.Csv` (§3):
+what matters is the *runtime* type of the object handed to `Import`, and
+`ReadDynamic`'s rows are concrete `Dictionary<string, string>` instances under an
+`IDictionary<string, string>` return type, so the `is IDictionary` check still
+passes.
 
 ## 3. Practicality of `ComputerCodeBlue.Csv` for this feature
 
-`Karl.Cli.csproj` already references `ComputerCodeBlue.Csv` (has since the initial
-commit), but nothing in the codebase uses it yet — it appears to have been added in
-anticipation of this exact feature. Worth being explicit about why it doesn't
-directly fit, so the choice below isn't a surprise:
+`Karl.Cli.csproj` already references `ComputerCodeBlue.Csv` — now bumped to 1.3.0
+as part of this design. Worth being explicit about how the fit changed, since the
+first draft of this proposal reached the opposite conclusion.
 
-`ComputerCodeBlue.Csv` (also authored by you) is a thin, generic wrapper around
-CsvHelper with exactly four methods:
+At 1.2.1, `ComputerCodeBlue.Csv` was a thin, generic wrapper around CsvHelper with
+four methods, all requiring a concrete `T`:
 
 ```csharp
 IEnumerable<T> Read<T>(string filePath, CsvOptions? options = null);
@@ -114,96 +129,96 @@ void Write<T>(string filePath, IEnumerable<T> items, CsvOptions? options = null)
 Task WriteAsync<T>(string filePath, IEnumerable<T> items, CsvOptions? options = null, CancellationToken ct = default);
 ```
 
-All four require a concrete `T` — CsvHelper binds columns to `T`'s public
-properties via reflection. That's the wrong shape for this feature: a mass-mail
-CSV has **arbitrary, user-defined columns** (whatever tokens the campaign needs),
-so there's no fixed record type to bind to. The two ways around that don't hold up:
+That's the wrong shape for this feature: a mass-mail CSV has **arbitrary,
+user-defined columns** (whatever tokens the campaign needs), so there's no fixed
+record type to bind to, and CsvHelper's own workarounds (`Read<Dictionary<...>>`,
+`Read<dynamic>`) don't hold up — see the 1.2.1-era analysis this section used to
+contain, preserved in git history at `b9d266c` if needed.
 
-- `CsvFile.Read<Dictionary<string,string>>(...)` — CsvHelper's default class-map
-  auto-mapping does not bind to `Dictionary<TKey,TValue>`; it expects settable
-  properties, not an indexer. This throws at runtime.
-- `CsvFile.Read<dynamic>(...)` — `dynamic` erases to `object` at the call site, and
-  CsvHelper's dynamic-record support requires it to construct an `ExpandoObject`.
-  Even if that worked through the wrapper, `ExpandoObject` implements
-  `IDictionary<string, object>` but **not** the non-generic `System.Collections.IDictionary`
-  that Scriban's `Import` checks for — so it would silently fall through to
-  Scriban's reflection-based import path, find no real CLR properties on the
-  `ExpandoObject`, and import nothing. Verified against Scriban 7.1.0's
-  `ScriptObjectExtensions.Import` source. This would look like it works (no
-  exception) but every token would render empty.
+**1.3.0 closes that gap directly.** `CsvFile.ReadDynamic` / `ReadDynamicAsync`
+(`src/ComputerCodeBlue.Csv/CsvFile.cs`, backed by `CsvDynamicReader.cs`) read a
+row per `Dictionary<string, string>`, keyed by the file's actual header names,
+with every value as the raw field string — no type inference, no fixed `T`:
 
-There's also a mechanical blocker: the wrapper's `CsvOptionsAdapter` (culture,
-delimiter detection, trim, missing-field/bad-data behavior →
-`CsvHelper.Configuration.CsvConfiguration`) is `internal`, so even the "just use
-`CsvOptions` for its sane defaults" path isn't available outside that assembly.
+```csharp
+public static IEnumerable<IDictionary<string, string>> ReadDynamic(string filePath, CsvOptions? options = null);
+public static IAsyncEnumerable<IDictionary<string, string>> ReadDynamicAsync(string filePath, CsvOptions? options = null, CancellationToken ct = default);
+```
 
-**Recommendation:** don't route this feature through `ComputerCodeBlue.Csv` as it
-stands. Use CsvHelper directly in `Karl.Cli` (see §4) — it's a handful of lines and
-matches your instruction to use CsvHelper for this. Separately, if you want
-`ComputerCodeBlue.Csv` to eventually support "arbitrary rows as string maps," that's
-a generically useful addition to *that* package (e.g. a
-`ReadDictionaries(string path, CsvOptions?)` returning
-`IEnumerable<IReadOnlyDictionary<string,string>>`), but it's a change to a separate
-repo and shouldn't block or be bundled into this feature. Flagged as an open
-question in §9, not decided here.
+This is exactly the shape §2 needs: a `Dictionary<string, string>` per row (the
+concrete type constructed internally by `CsvDynamicReader.ReadRow`), returned
+through an `IDictionary<string, string>`-typed enumerable. Two things that made
+1.2.1 impractical are gone:
+
+- No fixed `T` — `ReadDynamic` was purpose-built for "arbitrary columns, string
+  values," not adapted from a typed-record API.
+- `CsvOptionsAdapter` (culture, delimiter detection, trim, missing-field/bad-data
+  behavior) is still `internal`, but that no longer matters: `CsvOptions` itself
+  is public and `ReadDynamic` accepts it directly, so `Karl.Cli` gets CsvHelper's
+  configuration surface without touching `CsvOptionsAdapter` or CsvHelper types
+  at all.
+
+**`CsvOptions.Default` already matches what this feature needs**, with no
+customization required: `DetectDelimiter = true`, `Trim = Trim`,
+`IgnoreBlankLines = true`, `MissingField = Ignore` (don't throw on ragged rows),
+`BadData = Ignore` (don't throw on unescaped quotes). Passing `null`/omitting
+`options` to `ReadDynamic` is sufficient.
+
+**Recommendation (supersedes the original one): route this feature through
+`ComputerCodeBlue.Csv.CsvFile.ReadDynamic`.** No CsvHelper reference is added to
+`Karl.Cli` (§6) — CSV parsing edge cases (ragged rows, quoted fields with commas/
+newlines, delimiter detection) are the library's concern and are covered by its
+own test suite, not re-tested here (§10).
+
+One limitation to know about: `ReadDynamic` returns *data rows only* — there's no
+separate "just the headers" API. For a CSV with a header row but zero data rows,
+there's nothing to inspect `--to-column` against. See §5's validation rules for
+how this design handles that case.
 
 ## 4. CSV row reading
 
-New internal type in `Karl.Cli`, e.g. `src/Karl.Cli/CsvModelSource.cs`:
+No new type is needed in `Karl.Cli` — `CsvFile.ReadDynamic` from
+`ComputerCodeBlue.Csv` is called directly where the CSV batch branch needs rows,
+inside `KarlCliCommandFactory.HandleEmailAsync`:
 
 ```csharp
-internal static class CsvModelSource
+using ComputerCodeBlue.Csv;
+
+IReadOnlyList<IDictionary<string, string>> rows;
+try
 {
-    internal static IReadOnlyList<IReadOnlyDictionary<string, string>> ReadRows(string filePath)
-    {
-        var config = new CsvConfiguration(CultureInfo.InvariantCulture)
-        {
-            HasHeaderRecord = true,
-            DetectDelimiter = true,
-            TrimOptions = TrimOptions.Trim,
-            IgnoreBlankLines = true,
-            MissingFieldFound = null,   // don't throw on ragged rows
-            BadDataFound = null,        // don't throw on unescaped quotes etc.
-        };
-
-        using var streamReader = new StreamReader(filePath);
-        using var csv = new CsvReader(streamReader, config);
-
-        csv.Read();
-        csv.ReadHeader();
-        var headers = csv.HeaderRecord ?? Array.Empty<string>();
-
-        var rows = new List<IReadOnlyDictionary<string, string>>();
-        while (csv.Read())
-        {
-            var row = new Dictionary<string, string>(headers.Length, StringComparer.Ordinal);
-            foreach (var header in headers)
-            {
-                row[header] = csv.GetField(header) ?? string.Empty;
-            }
-            rows.Add(row);
-        }
-
-        return rows;
-    }
+    rows = CsvFile.ReadDynamic(csvPathValue).ToList();
+}
+catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+{
+    writeLine($"Could not read CSV file '{csvPathValue}': {ex.Message}");
+    return 1;
 }
 ```
 
 Notes:
 
-- Every field is read with `GetField(string)` (string overload) — CsvHelper never
-  attempts numeric/date type inference this way, which matches "assume everything
-  is a string" (e.g. a zip code column like `"00501"` stays `"00501"`, not `501`).
-  This is the reason to avoid `GetRecords<dynamic>()`: besides the `IDictionary`
-  problem in §3, CsvHelper's dynamic path does its own type inference per field,
-  which is exactly what we don't want.
-- `Dictionary<string, string>` keys are the header text verbatim (`StringComparer.Ordinal`),
-  matching the JSON model's case-sensitive-exact-match behavior from §2 — so
-  `{{FirstName}}` requires a column literally named `FirstName`, same rule users
-  already learned from `--model`.
-- No async/streaming for v1 — mass-mail CSVs for this kind of tool are realistically
-  in the tens-to-low-thousands of rows; reading the whole file into memory up front
-  also lets us fail fast (see §6) before sending anything.
+- `.ToList()` materializes the sequence into an indexable, countable
+  `IReadOnlyList` for the `[12/50]`-style progress output in §5 — `ReadDynamic`
+  already builds its result eagerly internally (`CsvDynamicReader.ReadRecords`
+  returns a `List<IDictionary<string, string>>`), so this doesn't add a second
+  full read of the file, just a shallow copy of an already-in-memory list.
+- No async/streaming for v1, consistent with the original proposal's reasoning:
+  mass-mail CSVs for this kind of tool are realistically in the tens-to-low-
+  thousands of rows, and reading the whole file into memory up front lets us fail
+  fast (§5) before sending anything. `ReadDynamicAsync` exists in the library if
+  that changes later.
+- Dictionary keys are the header text verbatim (`ReadDynamic`'s row keys come
+  straight from `csv.HeaderRecord`), matching the JSON model's case-sensitive-
+  exact-match behavior from §2 — so `{{FirstName}}` requires a column literally
+  named `FirstName`, same rule users already learned from `--model`.
+- Values are never type-inferred (a zip code like `"00501"` stays `"00501"`, not
+  `501`) — this is `ReadDynamic`'s documented behavior, not something `Karl.Cli`
+  has to arrange.
+- `File.OpenRead` inside `CsvFile.ReadDynamic` throws `FileNotFoundException`
+  (an `IOException` subtype) for a missing path and `UnauthorizedAccessException`
+  for a permissions problem; both are caught above and turned into a clean exit-1
+  message instead of a raw stack trace.
 
 ## 5. CLI surface changes (`KarlCliCommandFactory.cs`)
 
@@ -214,7 +229,7 @@ rather than a new subcommand):
 | Option | Alias | Required | Description |
 |---|---|---|---|
 | `--csv` | — | no | Path to CSV file. Presence of this flag switches the command into batch mode. |
-| `--to-column` | — | required *iff* `--csv` given | Name of the CSV column holding the recipient email address. |
+| `--to-column` | — | required *if* `--csv` given | Name of the CSV column holding the recipient email address. |
 | `--name-column` | — | no | Name of the CSV column holding the recipient's display name. If omitted or the column is blank for a row, the email address is used with no display name. |
 
 `--to-column` has **no default**. A mass-mail CSV's email column could be named
@@ -229,7 +244,7 @@ time. (Flagged in §9 in case you'd rather default it.)
 - `--csv` + `--to` together → error, exit 1: *"--to is not used in CSV batch mode; the recipient comes from --to-column in each row."*
 - `--csv` + `--model` together → error, exit 1: *"--csv and --model cannot be combined yet; see docs for planned per-row + shared token merging."* (v1 keeps these mutually exclusive — see §8 for why merging is deferred.)
 - `--csv` without `--to-column` → error, exit 1.
-- `--to-column` value not found in the CSV header row → error, exit 1, before any sends.
+- `--to-column` value not found in the CSV header row → error, exit 1, before any sends. Checked against `rows[0].Keys` after reading — since `ReadDynamic` returns data rows only (§3), a CSV with a header row but zero data rows has nothing to check the column name against; in that case the batch proceeds with zero rows to send and reports `Sent 0 of 0 emails from contacts.csv`, rather than guessing whether the header would have matched.
 - CSV file missing / unreadable → error, exit 1 (unlike `--model`'s current silent-fallback-to-`{}` behavior — this is an explicit improvement, not a regression, since a missing recipient list can't degrade to "send nothing to nobody" quietly).
 
 ### Per-row behavior (after validation passes)
@@ -237,10 +252,11 @@ time. (Flagged in §9 in case you'd rather default it.)
 - A row whose `--to-column` value is blank/whitespace is **skipped**, a warning is
   written (`writeLine`), and processing continues — one bad row shouldn't sink a
   400-row campaign.
-- For each remaining row: build `Dictionary<string,string> model` from the row,
-  render subject + body via the existing `ITemplateRenderer.RenderAsync(template, model)` —
-  no renderer changes needed (§2/§4) — build an `EmailMessage` (recipient from
-  `--to-column`/`--name-column`, everything else same as today), call
+- For each remaining row: the row (`IDictionary<string, string>`, as returned by
+  `ReadDynamic`) is passed straight through as the `object? model` argument to
+  `ITemplateRenderer.RenderAsync(template, model)` — no renderer changes needed
+  (§2/§4) — build an `EmailMessage` (recipient from `--to-column`/`--name-column`,
+  everything else same as today), call
   `emailService.SendAsync(message, cancellationToken)`.
 - If a send throws (SMTP failure, etc.), catch it, log it (`writeLine`), count it
   as a failure, and **keep going** to the next row rather than aborting the whole
@@ -258,7 +274,7 @@ which gives System.CommandLine no cancellation token to wire up to Ctrl+C. A
 single-send command finishes fast enough that this doesn't matter today, but a
 300-row SMTP batch might run for minutes. This design switches to the
 `SetAction(Func<ParseResult, CancellationToken, Task<int>>)` overload (already
-available in System.CommandLine 2.0.7) and threads that token through the row loop
+available in System.CommandLine 2.0.10) and threads that token through the row loop
 and into `emailService.SendAsync(message, cancellationToken)` (the interface
 already accepts one). This directly serves CLAUDE.md's "use cancellation tokens for
 long-running work" — it wasn't worth doing for a single send, it is for a batch.
@@ -268,22 +284,27 @@ long-running work" — it wasn't worth doing for a single send, it is for a batc
 `HandleEmailAsync` currently inlines "load model → render subject/body → build
 `EmailMessage`" once. To avoid duplicating that between single-send and CSV-batch
 modes, this design extracts it into a small local function (e.g.
-`RenderMessageAsync(IReadOnlyDictionary<string,string>? templateModel, string toAddress, string? toName)`)
+`RenderMessageAsync(object? templateModel, string toAddress, string? toName)`)
 used by both branches. No behavior change to the existing single-send path.
 
 ## 6. Package changes
 
-Add an explicit reference in `src/Karl.Cli/Karl.Cli.csproj`:
+`src/Karl.Cli/Karl.Cli.csproj` already declares:
 
 ```xml
-<PackageReference Include="CsvHelper" Version="33.1.0" />
+<PackageReference Include="ComputerCodeBlue.Csv" Version="1.3.0" />
 ```
 
-`CsvHelper` is already pulled in transitively today via `ComputerCodeBlue.Csv`
-(which depends on `CsvHelper 33.1.0`), so this adds no new dependency to the
-resolved graph — it just makes the dependency explicit instead of relying on a
-transitive reference from an otherwise-unused package. If `ComputerCodeBlue.Csv`
-is ever dropped from `Karl.Cli`, the CSV feature shouldn't silently stop compiling.
+(bumped from 1.2.1 as part of this design; verified against
+`https://api.nuget.org/v3-flatcontainer/computercodeblue.csv/index.json`, and
+`dotnet restore` succeeds against it.)
+
+No direct `CsvHelper` package reference is added to `Karl.Cli` — unlike the
+original version of this proposal, `Karl.Cli` never calls a CsvHelper type
+directly; `ComputerCodeBlue.Csv.CsvFile.ReadDynamic` and the public
+`ComputerCodeBlue.Csv.CsvOptions` are the only new surface used (§3/§4). CsvHelper
+stays an implementation detail one layer down, pulled in transitively same as
+today.
 
 ## 7. Why a flag on existing commands, not a new subcommand
 
@@ -321,39 +342,49 @@ against.
   "Measure first. Optimize second.").
 - **CC/BCC/attachments from CSV columns.** Not requested; would extend the row
   schema (`CcColumn`, `BccColumn`, etc.) with no current use case.
-- **Extending `ComputerCodeBlue.Csv`** with a dictionary/dynamic-row API — belongs
-  in that package's own repo if wanted (§3), not bundled here.
+- **A headers-only / peek API on `ComputerCodeBlue.Csv`.** §5's `--to-column`
+  validation gap (can't check a header-only, zero-row CSV) could be closed by such
+  an API, but it's a change to a separate repo, not demonstrated as needed yet,
+  and shouldn't block this feature — flagged as an open question in §9 instead.
 
 ## 9. Open questions for you
 
 1. Should `--to-column` default to `"Email"` for convenience, or stay required with
-   no default (current proposal, safer against silently-wrong guesses)?
+   no default (current proposal, safer against silently-wrong guesses)? **No. We
+   may wish to change this behavior later, but let's wait until there's a 
+   demonstrated need.**
 2. Is the mutual-exclusivity of `--csv`/`--model` acceptable for v1, or is
    merged shared+per-row tokens (§8) actually needed now rather than later?
-3. Do you want `ComputerCodeBlue.Csv` to grow a dictionary-row API so this logic
-   can eventually move there instead of living in `Karl.Cli` — or is CsvHelper
-   direct in `Karl.Cli` fine long-term?
+   **This is acceptable for v1. We should plan to implement this later.**
+3. Is the §5 behavior for a header-only, zero-row CSV (skip the `--to-column`
+   check, report `Sent 0 of 0`) acceptable, or would you rather
+   `ComputerCodeBlue.Csv` grow a way to read just the header row so this case can
+   be validated too (§8)? **We should accept this now and report `Sent 0 of 0`
+   and defer an adjustment to the next version of `ComputerCodeBlue.Csv`.
 4. Failure policy: continue-and-report (current proposal) vs. stop-on-first-failure
    for `send`? Continue-and-report seems right for a mass campaign, but worth
    confirming since it means a bad SMTP config might burn through several rows
-   before you notice.
+   before you notice. **Continue and report is the desired behavior. The current
+   proposal is correct.**
 
 ## 10. Testing plan
 
-`test/Karl.Test/CsvModelSourceTests.cs` (new):
-- Parses headers and rows into `Dictionary<string,string>` correctly.
-- Values that look numeric/zero-padded stay strings verbatim (e.g. `"00501"`).
-- Ragged rows (missing trailing column) don't throw, given `MissingFieldFound = null`.
-- Blank lines are ignored.
-- Quoted fields containing commas/newlines parse correctly (standard CsvHelper behavior — a smoke test, not re-testing CsvHelper itself).
+CSV-parsing edge cases (ragged rows, quoted fields with commas/newlines, blank
+lines, delimiter detection, value-stays-a-string behavior) are exercised by
+`ComputerCodeBlue.Csv`'s own test suite (`tests/ComputerCodeBlue.Csv.Tests/`)
+against `ReadDynamic` and don't need to be re-tested in `Karl.Cli` — this is the
+main testing-surface simplification from routing through the library instead of
+a hand-rolled reader (§3).
 
 `test/Karl.Test/KarlCliCommandTests.cs` (additions):
 - `Preview_Csv_SendsOneEmailPerRow_WithTokensSubstituted` — 2-row CSV, assert two renders happened with distinct substituted values.
 - `Preview_Csv_MissingToColumnHeader_ReturnsExitCode1WithClearError`.
+- `Preview_Csv_HeaderOnlyZeroRows_ReturnsExitCode0WithZeroSentSummary` — covers the §5/§9 edge case explicitly so its behavior is locked in, not just documented.
 - `Preview_Csv_SkipsRowsWithBlankRecipient_AndReportsSkippedCount`.
 - `Preview_CsvAndModel_ReturnsExitCode1` / `Preview_CsvAndTo_ReturnsExitCode1` (mutual exclusivity).
 - `File_Csv_CreatesOneFileForEachRow`.
 - `Send_Csv_ContinuesAfterOneRowFails_AndReturnsExitCode1` (needs the test SMTP fake to throw on a specific recipient — check whether the existing fake in `SmtpTransportTests.cs`/`KarlCliCommandTests.cs` (`CaptureSink`) supports per-call failure injection; if it only records `LastMessage` today, it'll need a small extension to record *all* sent messages, not just the last one, to assert batch counts).
+- `Preview_Csv_MissingFile_ReturnsExitCode1WithClearError` — exercises the `IOException`/`UnauthorizedAccessException` catch in §4 rather than letting `CsvFile.ReadDynamic`'s exception surface raw.
 
 ## 11. Documentation updates
 
@@ -365,8 +396,8 @@ against.
 ## 12. Incidental issue observed (not part of this feature, flagging only)
 
 While reading `KarlCliCommandFactory.cs`, the `--to` option (`-t`) and `--tls`
-option (`-t`) both declare the same short alias (`src/Karl.Cli/KarlCliCommandFactory.cs:48-52`
-and `:135-139`). Both are added to the `send` command via `AddCommonOptions` +
+option (`-t`) both declare the same short alias (`src/Karl.Cli/KarlCliCommandFactory.cs:49-53`
+and `:136-140`). Both are added to the `send` command via `AddCommonOptions` +
 the explicit `send.Options.Add(tls)`. Not touched by this design (out of scope),
 but worth a separate small fix since it could throw or silently misbehave in
 `send`'s option parsing.

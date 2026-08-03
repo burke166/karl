@@ -252,7 +252,7 @@ public class KarlCliCommandTests
     [Theory]
     [InlineData("preview", "--from", "--to", "--subject", "--body", "--markdown", "--model", "--json", "--layout", "--layout-data", "--css", "--verbose")]
     [InlineData("file", "--from", "--to", "--subject", "--body", "--markdown", "--model", "--json", "--layout", "--layout-data", "--css", "--verbose", "--output")]
-    [InlineData("send", "--from", "--to", "--subject", "--body", "--markdown", "--model", "--json", "--layout", "--layout-data", "--css", "--verbose", "--smtp-host", "--smtp-port", "--username", "--password", "--tls")]
+    [InlineData("send", "--from", "--to", "--subject", "--body", "--markdown", "--model", "--json", "--layout", "--layout-data", "--css", "--verbose", "--smtp-host", "--smtp-port", "--username", "--password", "-tls")]
     public async Task CommandHelp_ShowsExpectedOptions(string commandName, params string[] expectedOptions)
     {
         var output = await InvokeWithConsoleCaptureAsync([commandName, "--help"]);

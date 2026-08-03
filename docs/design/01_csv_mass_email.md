@@ -396,8 +396,18 @@ a hand-rolled reader (§3).
 ## 12. Incidental issue observed (not part of this feature, flagging only)
 
 While reading `KarlCliCommandFactory.cs`, the `--to` option (`-t`) and `--tls`
-option (`-t`) both declare the same short alias (`src/Karl.Cli/KarlCliCommandFactory.cs:49-53`
-and `:136-140`). Both are added to the `send` command via `AddCommonOptions` +
-the explicit `send.Options.Add(tls)`. Not touched by this design (out of scope),
-but worth a separate small fix since it could throw or silently misbehave in
-`send`'s option parsing.
+option (`-t`) both declared the same short alias
+(`src/Karl.Cli/KarlCliCommandFactory.cs:49-53` and `:136-140`). Both were added to
+the `send` command via `AddCommonOptions` + the explicit `send.Options.Add(tls)`.
+
+**Fixed before implementing this design's build plan** (not part of the CSV
+feature itself): `--to` keeps `-t`; `--tls` now takes `-tls` as its alias instead,
+giving `-tls`/`--tls` both as accepted spellings with no collision. One
+side-effect worth knowing: System.CommandLine's default help renderer collapses
+`-tls`/`--tls` into a single `-tls <tls>` line in `send --help` (it treats a
+single-dash and double-dash alias with identical text as redundant — unlike, say,
+`-h`/`--host`/`--smtp-host`, whose three forms all have distinct text and all
+render). Both forms still parse correctly on the command line; only the
+generated help text shows one of them. `CommandHelp_ShowsExpectedOptions` in
+`test/Karl.Test/KarlCliCommandTests.cs` was updated to assert `-tls` (what's
+actually rendered) instead of `--tls`.

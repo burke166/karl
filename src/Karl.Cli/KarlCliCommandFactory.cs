@@ -133,7 +133,7 @@ public static class KarlCliCommandFactory
             DefaultValueFactory = _ => "emails"
         };
 
-        var tls = new Option<string>("--tls", ["-t"])
+        var tls = new Option<string>("--tls", ["-tls"])
         {
             Description = "STARTTLS behavior",
             Required = false

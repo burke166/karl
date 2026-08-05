@@ -20,7 +20,8 @@
     <PackageProjectUrl>https://github.com/burke166/Karl</PackageProjectUrl>
     <RepositoryUrl>https://github.com/burke166/Karl</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>    
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
   <ItemGroup>
@@ -28,6 +29,10 @@
     <ProjectReference Include="..\Karl.Extensions.Microsoft\Karl.Extensions.Microsoft.csproj" />
     <ProjectReference Include="..\Karl.Template.Scriban\Karl.Template.Scriban.csproj" />
     <ProjectReference Include="..\Karl.Transport.Smtp\Karl.Transport.Smtp.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 
 </Project>

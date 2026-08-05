@@ -19,9 +19,13 @@
     <PackageProjectUrl>https://github.com/burke166/Karl</PackageProjectUrl>
     <RepositoryUrl>https://github.com/burke166/Karl</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>    
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Karl.Abstractions\Karl.Abstractions.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 </Project>

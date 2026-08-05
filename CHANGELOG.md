@@ -6,6 +6,18 @@ package (and `Karl.Cli`) is versioned independently in its own `.csproj`;
 this file tracks releases of the repository as a whole, and each entry below
 notes which package it affects.
 
+## [1.3.1] - 2026-08-05
+
+### Documentation
+
+- `README.md`: the `Karl.Cli` section now shows install instructions directly
+  (`dotnet tool install --global Karl.Cli`, and the local tool-manifest path
+  via `dotnet new tool-manifest` + `dotnet tool install Karl.Cli`) instead of
+  only linking to `src/Karl.Cli/README.md` — that relative link is dead once
+  this README is embedded standalone on a NuGet.org package page. No code
+  changes; republished so the fix is visible on the already-published 1.3.0
+  package pages.
+
 ## [1.3.0] - 2026-08-04
 
 ### Added

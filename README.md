@@ -425,7 +425,29 @@ Karl includes a standalone CLI tool as a working example and also usable for:
 * CI/CD pipelines
 * Administrative scripts
 
-Information on using Karl.Cli is available here → [`src/Karl.Cli/README.md`](src/Karl.Cli/README.md)
+`Karl.Cli` is packaged as a [.NET tool](https://learn.microsoft.com/dotnet/core/tools/global-tools),
+not a library — install it with `dotnet tool install`, not `dotnet add package`:
+
+```bash
+dotnet tool install --global Karl.Cli
+```
+
+Or scoped to a repo/solution via a local tool manifest, so the version is pinned in
+`dotnet-tools.json` alongside your other local tools:
+
+```bash
+dotnet new tool-manifest
+dotnet tool install Karl.Cli
+```
+
+Either way, the tool runs as `karl` (`dotnet karl` for a local install):
+
+```bash
+karl send --from noreply@example.com --smtp-host smtp.example.com --to user@example.com --subject "Hello" --body "# Hello World"
+```
+
+Full CLI documentation (all options, mass email via `--csv`, attachments via `--attach`) is
+available here → [`src/Karl.Cli/README.md`](src/Karl.Cli/README.md)
 
 ---
 

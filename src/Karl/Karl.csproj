@@ -12,7 +12,7 @@
     <DebugType>portable</DebugType>  
 
     <PackageId>Karl</PackageId>
-    <Version>1.2.0</Version>
+    <Version>1.3.0</Version>
     <Title>Karl the Mailman Delivers</Title>
     <Authors>Christopher Burke</Authors>
     <Description>A wrapper for template email functionality.</Description>

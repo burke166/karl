@@ -1,6 +1,6 @@
 # Design: Sending Attachments via Karl and Karl.Cli
 
-Status: Accepted
+Status: Implemented
 Owner: Karl / Karl.Cli
 Target version: 1.3.0 (all packages, bumped together)
 Related packages: `Karl.Abstractions`, `Karl`, `Karl.Transport.Smtp`, `Karl.Transport.File`,

@@ -119,6 +119,32 @@ bob@example.com,Bob,Bob Jones
 JSON property) exactly** — a column named `FirstName` only satisfies
 `{{FirstName}}` in a template, not `{{firstname}}` or `{{first_name}}`.
 
+## Attachments
+
+`send`, `file`, and `preview` all accept a repeatable `--attach`/`-a` option to attach one or more
+local files:
+
+```bash
+karl send \
+  --from noreply@example.com \
+  --smtp-host smtp.example.com \
+  --to user@example.com \
+  --subject "Your invoice" \
+  --markdown ./invoice.md \
+  --attach ./invoice.pdf \
+  -a ./terms.pdf
+```
+
+* The display name and content type are inferred from each path (`invoice.pdf` becomes
+  `application/pdf`); unrecognized extensions fall back to `application/octet-stream`.
+* A missing `--attach` path fails the whole command before anything is sent or rendered, the
+  same as a missing `--markdown`/`--model`/`--csv` path.
+* `--attach` composes with `--csv`: the same set of attached files is sent with every row's
+  personalized message.
+* `file` and `preview` only list attachment names and content types in their output — they don't
+  copy the attached bytes anywhere. Use `send` against a test SMTP server to verify the actual
+  file contents.
+
 ## File Output Mode
 
 ```bash

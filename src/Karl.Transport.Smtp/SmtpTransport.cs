@@ -51,37 +51,63 @@ public class SmtpTransport : IEmailTransport
             HtmlBody = message.Body.Html
         };
 
-        mimeMessage.Body = bodyBuilder.ToMessageBody();
-
-        var secureSocketOptions = _options.SecurityMode.ToLowerInvariant() switch
-        {
-            "none" => SecureSocketOptions.None,
-            "implicittls" => SecureSocketOptions.SslOnConnect,
-            "starttlsrequired" => SecureSocketOptions.StartTls,
-            "starttlswhenavailable" => SecureSocketOptions.StartTlsWhenAvailable,
-            _ => SecureSocketOptions.StartTls
-        };
-
-        using var client = _smtpClientFactory.Create();
-        var isConnected = false;
+        var openedAttachments = new List<(Stream Stream, bool OwnsStream)>();
 
         try
         {
-            await client.ConnectAsync(_options.Host, _options.Port, secureSocketOptions, cancellationToken);
-            isConnected = true;
-
-            if (!string.IsNullOrEmpty(_options.Username))
+            foreach (var attachment in message.Attachments)
             {
-                await client.AuthenticateAsync(_options.Username, _options.Password ?? string.Empty, cancellationToken);
+                var stream = await attachment.Source.OpenReadAsync(cancellationToken);
+                openedAttachments.Add((stream, attachment.Source.OwnsStream));
+                await bodyBuilder.Attachments.AddAsync(
+                    attachment.FileName,
+                    stream,
+                    MimeKit.ContentType.Parse(attachment.ContentType),
+                    cancellationToken);
             }
 
-            await client.SendAsync(mimeMessage, cancellationToken);
+            mimeMessage.Body = bodyBuilder.ToMessageBody();
+
+            var secureSocketOptions = _options.SecurityMode.ToLowerInvariant() switch
+            {
+                "none" => SecureSocketOptions.None,
+                "implicittls" => SecureSocketOptions.SslOnConnect,
+                "starttlsrequired" => SecureSocketOptions.StartTls,
+                "starttlswhenavailable" => SecureSocketOptions.StartTlsWhenAvailable,
+                _ => SecureSocketOptions.StartTls
+            };
+
+            using var client = _smtpClientFactory.Create();
+            var isConnected = false;
+
+            try
+            {
+                await client.ConnectAsync(_options.Host, _options.Port, secureSocketOptions, cancellationToken);
+                isConnected = true;
+
+                if (!string.IsNullOrEmpty(_options.Username))
+                {
+                    await client.AuthenticateAsync(_options.Username, _options.Password ?? string.Empty, cancellationToken);
+                }
+
+                await client.SendAsync(mimeMessage, cancellationToken);
+            }
+            finally
+            {
+                if (isConnected)
+                {
+                    await client.DisconnectAsync(true, cancellationToken);
+                }
+            }
         }
         finally
         {
-            if (isConnected)
+            foreach (var (stream, ownsStream) in openedAttachments)
             {
-                await client.DisconnectAsync(true, cancellationToken);
+                if (ownsStream)
+                {
+                    await stream.DisposeAsync();
+                }
             }
         }
     }

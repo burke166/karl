@@ -146,6 +146,30 @@ public sealed class StdOutEmailTransportTests
     }
 
     [Fact]
+    public async Task SendAsync_WithAttachments_ListsFileNameAndContentTypeInOutput()
+    {
+        var transport = new StdOutEmailTransport();
+        var message = CreateBaseMessage();
+        message.Attachments.Add(EmailAttachment.FromFile("invoice.pdf"));
+        message.Attachments.Add(EmailAttachment.FromFile("terms.txt"));
+
+        var output = await CaptureOutputAsync(() => transport.SendAsync(message));
+
+        Assert.Contains("Attachments: invoice.pdf (application/pdf), terms.txt (text/plain)", output);
+    }
+
+    [Fact]
+    public async Task SendAsync_WithNoAttachments_OmitsAttachmentsLine()
+    {
+        var transport = new StdOutEmailTransport();
+        var message = CreateBaseMessage();
+
+        var output = await CaptureOutputAsync(() => transport.SendAsync(message));
+
+        Assert.DoesNotContain("Attachments:", output);
+    }
+
+    [Fact]
     public async Task SendAsync_WithNullMessage_ThrowsArgumentNullException()
     {
         var transport = new StdOutEmailTransport();

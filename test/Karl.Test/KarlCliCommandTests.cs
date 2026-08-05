@@ -445,6 +445,117 @@ public class KarlCliCommandTests
     }
 
     [Fact]
+    public async Task Send_WithAttach_IncludesAttachmentInSentMessage()
+    {
+        var tempDir = CreateTempDirectory();
+
+        try
+        {
+            var attachPath = Path.Combine(tempDir, "invoice.pdf");
+            await File.WriteAllTextAsync(attachPath, "invoice content");
+
+            var capture = new CaptureSink();
+            var exitCode = await InvokeAsync(
+                ["send", "--from", "from@example.com", "--to", "to@example.com", "--subject", "Subject", "--body", "Body", "--smtp-host", "smtp.example.com", "--attach", attachPath],
+                CreateCaptureOptions(capture));
+
+            Assert.Equal(0, exitCode);
+            Assert.NotNull(capture.LastMessage);
+            var attachment = Assert.Single(capture.LastMessage!.Attachments);
+            Assert.Equal("invoice.pdf", attachment.FileName);
+            Assert.Equal("application/pdf", attachment.ContentType);
+        }
+        finally
+        {
+            DeleteDirectory(tempDir);
+        }
+    }
+
+    [Fact]
+    public async Task Send_WithMultipleAttach_IncludesAllAttachments()
+    {
+        var tempDir = CreateTempDirectory();
+
+        try
+        {
+            var firstPath = Path.Combine(tempDir, "invoice.pdf");
+            var secondPath = Path.Combine(tempDir, "terms.txt");
+            await File.WriteAllTextAsync(firstPath, "invoice content");
+            await File.WriteAllTextAsync(secondPath, "terms content");
+
+            var capture = new CaptureSink();
+            var exitCode = await InvokeAsync(
+                ["send", "--from", "from@example.com", "--to", "to@example.com", "--subject", "Subject", "--body", "Body", "--smtp-host", "smtp.example.com", "--attach", firstPath, "-a", secondPath],
+                CreateCaptureOptions(capture));
+
+            Assert.Equal(0, exitCode);
+            Assert.NotNull(capture.LastMessage);
+            Assert.Equal(2, capture.LastMessage!.Attachments.Count);
+            Assert.Contains(capture.LastMessage.Attachments, a => a.FileName == "invoice.pdf");
+            Assert.Contains(capture.LastMessage.Attachments, a => a.FileName == "terms.txt");
+        }
+        finally
+        {
+            DeleteDirectory(tempDir);
+        }
+    }
+
+    [Fact]
+    public async Task Send_WithMissingAttachFile_ReturnsExitCode1WithClearError()
+    {
+        var tempDir = CreateTempDirectory();
+
+        try
+        {
+            var missingPath = Path.Combine(tempDir, "does-not-exist.pdf");
+
+            var output = new StringWriter();
+            var exitCode = await InvokeAsync(
+                ["send", "--from", "from@example.com", "--to", "to@example.com", "--subject", "Subject", "--body", "Body", "--smtp-host", "smtp.example.com", "--attach", missingPath],
+                new KarlCliCommandFactoryOptions { Write = output.Write, WriteLine = output.WriteLine });
+
+            Assert.Equal(1, exitCode);
+            Assert.Contains("Attachment file not found", output.ToString());
+            Assert.Contains(missingPath, output.ToString());
+        }
+        finally
+        {
+            DeleteDirectory(tempDir);
+        }
+    }
+
+    [Fact]
+    public async Task Send_CsvWithAttach_AppliesSameAttachmentsToEveryRow()
+    {
+        var tempDir = CreateTempDirectory();
+
+        try
+        {
+            var csvPath = Path.Combine(tempDir, "contacts.csv");
+            await File.WriteAllTextAsync(csvPath, "Email,FirstName\r\nalice@example.com,Alice\r\nbob@example.com,Bob\r\n");
+            var attachPath = Path.Combine(tempDir, "welcome-packet.pdf");
+            await File.WriteAllTextAsync(attachPath, "packet content");
+
+            var capture = new CaptureSink();
+            var exitCode = await InvokeAsync(
+                ["send", "--from", "from@example.com", "--subject", "Hi {{FirstName}}", "--body", "Body for {{FirstName}}", "--csv", csvPath, "--to-column", "Email", "--smtp-host", "smtp.example.com", "--attach", attachPath],
+                CreateCaptureOptions(capture));
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal(2, capture.SentMessages.Count);
+            Assert.All(capture.SentMessages, message =>
+            {
+                var attachment = Assert.Single(message.Attachments);
+                Assert.Equal("welcome-packet.pdf", attachment.FileName);
+            });
+        }
+        finally
+        {
+            DeleteDirectory(tempDir);
+        }
+    }
+
+    [Fact]
     public async Task Preview_Csv_MissingFile_ReturnsExitCode1WithClearError()
     {
         var tempDir = CreateTempDirectory();
@@ -477,9 +588,9 @@ public class KarlCliCommandTests
     }
 
     [Theory]
-    [InlineData("preview", "--from", "--to", "--subject", "--body", "--markdown", "--model", "--json", "--layout", "--layout-data", "--css", "--csv", "--to-column", "--name-column", "--verbose")]
-    [InlineData("file", "--from", "--to", "--subject", "--body", "--markdown", "--model", "--json", "--layout", "--layout-data", "--css", "--csv", "--to-column", "--name-column", "--verbose", "--output")]
-    [InlineData("send", "--from", "--to", "--subject", "--body", "--markdown", "--model", "--json", "--layout", "--layout-data", "--css", "--csv", "--to-column", "--name-column", "--verbose", "--smtp-host", "--smtp-port", "--username", "--password", "-tls")]
+    [InlineData("preview", "--from", "--to", "--subject", "--body", "--markdown", "--model", "--json", "--layout", "--layout-data", "--css", "--csv", "--to-column", "--name-column", "--attach", "--verbose")]
+    [InlineData("file", "--from", "--to", "--subject", "--body", "--markdown", "--model", "--json", "--layout", "--layout-data", "--css", "--csv", "--to-column", "--name-column", "--attach", "--verbose", "--output")]
+    [InlineData("send", "--from", "--to", "--subject", "--body", "--markdown", "--model", "--json", "--layout", "--layout-data", "--css", "--csv", "--to-column", "--name-column", "--attach", "--verbose", "--smtp-host", "--smtp-port", "--username", "--password", "-tls")]
     public async Task CommandHelp_ShowsExpectedOptions(string commandName, params string[] expectedOptions)
     {
         var output = await InvokeWithConsoleCaptureAsync([commandName, "--help"]);

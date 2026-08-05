@@ -12,7 +12,7 @@
     <DebugType>portable</DebugType>  
 
     <PackageId>Karl.Transport.StdOut</PackageId>
-    <Version>1.2.0</Version>
+    <Version>1.3.0</Version>
     <Authors>Christopher Burke</Authors>
     <Title>Karl StdOut Transport</Title>
     <Description>Standard output debugging transport for Karl email delivery.</Description>

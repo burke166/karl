@@ -188,6 +188,22 @@ public class WelcomeService
 }
 ```
 
+Attach a local file or a caller-supplied stream with `AttachFile`/`AttachStream`:
+
+```csharp
+await emailService.SendAsync(
+    new MailBuilder()
+        .To("user@example.com")
+        .Subject("Your invoice")
+        .HtmlBody("<p>Attached.</p>")
+        .AttachFile("./invoice.pdf")
+        .Build());
+```
+
+`AttachFile` reopens the file fresh on every send, so the same `EmailAttachment` can be reused
+across multiple messages. `AttachStream` hands Karl a stream you already have open (e.g. pulled
+from blob storage) — Karl reads it once and never closes it; the caller owns its lifetime.
+
 ---
 
 ## Using Individual Components
@@ -377,6 +393,13 @@ Register it:
 ```csharp
 services.AddSingleton<IEmailTransport, MyTransport>();
 ```
+
+A transport that wants to support attachments reads `message.Attachments` and calls
+`attachment.Source.OpenReadAsync()` to get the `Stream` to send. Check
+`attachment.Source.OwnsStream` before disposing that stream: `true` means Karl opened it (e.g. a
+local file via `AttachFile`) and your transport should dispose it when done; `false` means the
+caller supplied it (via `AttachStream`) and owns its lifetime — disposing it is not your
+transport's responsibility.
 
 ---
 

@@ -49,4 +49,30 @@ public class MailBuilderTests
         Assert.Equal("plain", message.Body.Text);
         Assert.Equal("<strong>html</strong>", message.Body.Html);
     }
+
+    [Fact]
+    public void AttachFile_AddsAttachmentToMessage()
+    {
+        var message = new MailBuilder()
+            .AttachFile("invoice.pdf")
+            .Build();
+
+        var attachment = Assert.Single(message.Attachments);
+        Assert.Equal("invoice.pdf", attachment.FileName);
+        Assert.Equal("application/pdf", attachment.ContentType);
+    }
+
+    [Fact]
+    public void AttachStream_AddsAttachmentToMessage()
+    {
+        using var stream = new MemoryStream();
+
+        var message = new MailBuilder()
+            .AttachStream(stream, "invoice.pdf")
+            .Build();
+
+        var attachment = Assert.Single(message.Attachments);
+        Assert.Equal("invoice.pdf", attachment.FileName);
+        Assert.Equal("application/pdf", attachment.ContentType);
+    }
 }

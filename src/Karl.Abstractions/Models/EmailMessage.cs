@@ -11,5 +11,7 @@ public sealed class EmailMessage
 
     public EmailBody Body { get; set; } = new();
 
+    public List<EmailAttachment> Attachments { get; } = new();
+
     public IDictionary<string, string> Headers { get; } = new Dictionary<string, string>();
 }

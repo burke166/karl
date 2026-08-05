@@ -182,6 +182,59 @@ public class SmtpTransportTests
         await Assert.ThrowsAsync<ArgumentNullException>(() => sut.SendAsync(null!));
     }
 
+    [Fact]
+    public async Task SendAsync_WithAttachments_AddsThemToTheMimeMessage()
+    {
+        var fakeClient = new FakeSmtpClientAdapter();
+        var sut = CreateSut(fakeClient);
+        var message = CreateMessage();
+        using var firstStream = new MemoryStream([1, 2, 3]);
+        using var secondStream = new MemoryStream([4, 5, 6]);
+        message.Attachments.Add(EmailAttachment.FromStream(firstStream, "first.pdf"));
+        message.Attachments.Add(EmailAttachment.FromStream(secondStream, "second.txt"));
+
+        await sut.SendAsync(message);
+
+        var attachments = fakeClient.SentMessage!.Attachments.OfType<MimePart>().ToList();
+        Assert.Equal(2, attachments.Count);
+        Assert.Contains(attachments, a => a.FileName == "first.pdf" && a.ContentType.MimeType == "application/pdf");
+        Assert.Contains(attachments, a => a.FileName == "second.txt" && a.ContentType.MimeType == "text/plain");
+    }
+
+    [Fact]
+    public async Task SendAsync_WithFileAttachment_DisposesStreamAfterSend()
+    {
+        using var tempDirectory = TemporaryDirectory.Create();
+        var filePath = Path.Combine(tempDirectory.Path, "invoice.pdf");
+        await File.WriteAllTextAsync(filePath, "invoice content");
+
+        var fakeClient = new FakeSmtpClientAdapter();
+        var sut = CreateSut(fakeClient);
+        var message = CreateMessage();
+        message.Attachments.Add(EmailAttachment.FromFile(filePath));
+
+        await sut.SendAsync(message);
+
+        // A FileStream left open without FileShare.Delete blocks deletion on Windows;
+        // if this succeeds, SmtpTransport disposed the stream it opened.
+        File.Delete(filePath);
+        Assert.False(File.Exists(filePath));
+    }
+
+    [Fact]
+    public async Task SendAsync_WithStreamAttachment_DoesNotDisposeCallerStream()
+    {
+        var fakeClient = new FakeSmtpClientAdapter();
+        var sut = CreateSut(fakeClient);
+        var message = CreateMessage();
+        using var callerStream = new MemoryStream([1, 2, 3]);
+        message.Attachments.Add(EmailAttachment.FromStream(callerStream, "invoice.pdf"));
+
+        await sut.SendAsync(message);
+
+        Assert.True(callerStream.CanRead);
+    }
+
     private static SmtpTransport CreateSut(FakeSmtpClientAdapter fakeClient)
     {
         return new SmtpTransport(CreateOptions(), new FakeSmtpClientFactory(fakeClient));

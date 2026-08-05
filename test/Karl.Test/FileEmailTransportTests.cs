@@ -91,6 +91,37 @@ public class FileEmailTransportTests
     }
 
     [Fact]
+    public async Task SendAsync_WithAttachments_ListsFileNameAndContentTypeInOutput()
+    {
+        using var tempDirectory = TemporaryDirectory.Create();
+        var sut = CreateSut(tempDirectory.Path);
+        var message = CreateMessage();
+        message.Attachments.Add(EmailAttachment.FromFile("invoice.pdf"));
+        message.Attachments.Add(EmailAttachment.FromFile("terms.txt"));
+
+        await sut.SendAsync(message);
+
+        var filePath = Assert.Single(Directory.GetFiles(tempDirectory.Path));
+        var content = await File.ReadAllTextAsync(filePath);
+
+        Assert.Contains("Attachments: invoice.pdf (application/pdf), terms.txt (text/plain)", content, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task SendAsync_WithNoAttachments_OmitsAttachmentsLine()
+    {
+        using var tempDirectory = TemporaryDirectory.Create();
+        var sut = CreateSut(tempDirectory.Path);
+
+        await sut.SendAsync(CreateMessage());
+
+        var filePath = Assert.Single(Directory.GetFiles(tempDirectory.Path));
+        var content = await File.ReadAllTextAsync(filePath);
+
+        Assert.DoesNotContain("Attachments:", content, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task SendAsync_PassesCancellationToken()
     {
         using var tempDirectory = TemporaryDirectory.Create();

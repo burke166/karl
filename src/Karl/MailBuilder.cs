@@ -48,5 +48,17 @@ public class MailBuilder
         return this;
     }
 
+    public MailBuilder AttachFile(string filePath, string? fileName = null, string? contentType = null)
+    {
+        _message.Attachments.Add(EmailAttachment.FromFile(filePath, fileName, contentType));
+        return this;
+    }
+
+    public MailBuilder AttachStream(Stream stream, string fileName, string? contentType = null)
+    {
+        _message.Attachments.Add(EmailAttachment.FromStream(stream, fileName, contentType));
+        return this;
+    }
+
     public EmailMessage Build() => _message;
 }

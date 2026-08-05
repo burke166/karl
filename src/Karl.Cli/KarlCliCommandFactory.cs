@@ -158,6 +158,13 @@ public static class KarlCliCommandFactory
             Required = false
         };
 
+        var attach = new Option<string[]>("--attach", ["-a"])
+        {
+            Description = "Path to a local file to attach. Repeatable to attach multiple files.",
+            Required = false,
+            DefaultValueFactory = _ => Array.Empty<string>()
+        };
+
         void AddCommonOptions(Command command)
         {
             command.Options.Add(verbose);
@@ -174,6 +181,7 @@ public static class KarlCliCommandFactory
             command.Options.Add(csvPath);
             command.Options.Add(toColumn);
             command.Options.Add(nameColumn);
+            command.Options.Add(attach);
         }
 
         AddCommonOptions(file);
@@ -201,6 +209,7 @@ public static class KarlCliCommandFactory
             var csvPathValue = parseResult.GetValue(csvPath);
             var toColumnValue = parseResult.GetValue(toColumn);
             var nameColumnValue = parseResult.GetValue(nameColumn);
+            var attachValues = parseResult.GetValue(attach) ?? [];
             var isCsvBatch = !string.IsNullOrWhiteSpace(csvPathValue);
 
             if (verboseValue)
@@ -249,6 +258,14 @@ public static class KarlCliCommandFactory
                 errors.AppendLine("No email subject was provided.");
             }
 
+            foreach (var path in attachValues)
+            {
+                if (!fileExists(path))
+                {
+                    errors.AppendLine($"Attachment file not found: '{path}'.");
+                }
+            }
+
             if (errors.Length > 0)
             {
                 write(errors.ToString());
@@ -277,12 +294,14 @@ public static class KarlCliCommandFactory
                 return 1;
             }
 
+            var attachments = attachValues.Select(path => EmailAttachment.FromFile(path)).ToList();
+
             async Task<EmailMessage> RenderMessageAsync(object? templateModel, string toAddress, string? toName)
             {
                 var renderedSubject = await renderer.RenderAsync(subjectValue ?? string.Empty, templateModel, cancellationToken);
                 var renderedBody = await renderer.RenderAsync(markdownText, templateModel, cancellationToken);
 
-                return new EmailMessage
+                var message = new EmailMessage
                 {
                     To =
                     {
@@ -296,6 +315,8 @@ public static class KarlCliCommandFactory
                         Html = renderedBody.Html
                     }
                 };
+                message.Attachments.AddRange(attachments);
+                return message;
             }
 
             if (isCsvBatch)

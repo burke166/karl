@@ -195,6 +195,78 @@ public class KarlCliCommandTests
     }
 
     [Fact]
+    public async Task Send_NoSmtpHostAndNoJsonConfig_ReturnsExitCode1WithClearError()
+    {
+        var tempDir = CreateTempDirectory();
+
+        try
+        {
+            var output = new StringWriter();
+            var exitCode = await InvokeAsync(
+                ["send", "--from", "from@example.com", "--to", "to@example.com", "--subject", "Subject", "--body", "Body"],
+                new KarlCliCommandFactoryOptions { Write = output.Write, WriteLine = output.WriteLine },
+                currentDirectory: tempDir);
+
+            Assert.Equal(1, exitCode);
+            Assert.Contains("No SMTP host was provided", output.ToString());
+        }
+        finally
+        {
+            DeleteDirectory(tempDir);
+        }
+    }
+
+    [Fact]
+    public async Task Send_JsonConfigHost_UsedWhenSmtpHostFlagNotProvided()
+    {
+        var tempDir = CreateTempDirectory();
+
+        try
+        {
+            var jsonPath = Path.Combine(tempDir, "karl.json");
+            await File.WriteAllTextAsync(jsonPath, """{"Karl":{"Smtp":{"Host":"smtp.example.com"}}}""");
+
+            var capture = new CaptureSink();
+            var exitCode = await InvokeAsync(
+                ["send", "--from", "from@example.com", "--to", "to@example.com", "--subject", "Subject", "--body", "Body", "--json", jsonPath],
+                CreateCaptureOptions(capture));
+
+            Assert.Equal(0, exitCode);
+            Assert.NotNull(capture.LastSmtpOptions);
+            Assert.Equal("smtp.example.com", capture.LastSmtpOptions!.Host);
+        }
+        finally
+        {
+            DeleteDirectory(tempDir);
+        }
+    }
+
+    [Fact]
+    public async Task Send_CliSmtpHost_OverridesJsonConfigHost()
+    {
+        var tempDir = CreateTempDirectory();
+
+        try
+        {
+            var jsonPath = Path.Combine(tempDir, "karl.json");
+            await File.WriteAllTextAsync(jsonPath, """{"Karl":{"Smtp":{"Host":"config.example.com"}}}""");
+
+            var capture = new CaptureSink();
+            var exitCode = await InvokeAsync(
+                ["send", "--from", "from@example.com", "--to", "to@example.com", "--subject", "Subject", "--body", "Body", "--smtp-host", "cli.example.com", "--json", jsonPath],
+                CreateCaptureOptions(capture));
+
+            Assert.Equal(0, exitCode);
+            Assert.NotNull(capture.LastSmtpOptions);
+            Assert.Equal("cli.example.com", capture.LastSmtpOptions!.Host);
+        }
+        finally
+        {
+            DeleteDirectory(tempDir);
+        }
+    }
+
+    [Fact]
     public async Task Send_DefaultsPort_WhenNotProvided()
     {
         var capture = new CaptureSink();

@@ -120,10 +120,10 @@ public static class KarlCliCommandFactory
             Required = false
         };
 
-        var smtpHost = new Option<string>("--smtp-host", ["-h", "--host"])
+        var smtpHost = new Option<string?>("--smtp-host", ["-h", "--host"])
         {
-            Description = "SMTP host",
-            Required = true
+            Description = "SMTP host. Can also be set via a JSON configuration file (Karl:Smtp:Host) or the KARL_Karl__Smtp__Host environment variable.",
+            Required = false
         };
 
         var smtpPort = new Option<int>("--smtp-port", ["-P", "--port"])
@@ -196,7 +196,7 @@ public static class KarlCliCommandFactory
 
         AddCommonOptions(preview);
 
-        async Task<int> HandleEmailAsync(ParseResult parseResult, CancellationToken cancellationToken, Action<IKarlBuilder, ParseResult, IConfiguration> configureKarlTransport)
+        async Task<int> HandleEmailAsync(ParseResult parseResult, CancellationToken cancellationToken, Action<IKarlBuilder, ParseResult, IConfiguration, StringBuilder> configureKarlTransport)
         {
             var verboseValue = parseResult.GetValue(verbose);
             var fromValue = parseResult.GetValue(from);
@@ -217,15 +217,15 @@ public static class KarlCliCommandFactory
                 writeLine("Karl CLI starting...");
             }
 
+            var errors = new StringBuilder();
             var services = new ServiceCollection();
             var karlBuilder = services.AddKarl();
             var configuration = loadConfiguration(jsonPathValue);
             karlBuilder.UseConfiguration(configuration);
-            configureKarlTransport(karlBuilder, parseResult, configuration);
+            configureKarlTransport(karlBuilder, parseResult, configuration, errors);
             karlBuilder.UseScribanTemplates();
             factoryOptions?.ConfigureServices?.Invoke(services);
 
-            var errors = new StringBuilder();
             if (isCsvBatch)
             {
                 if (!string.IsNullOrEmpty(toValue))
@@ -408,7 +408,7 @@ public static class KarlCliCommandFactory
         }
 
         file.SetAction((parseResult, cancellationToken) =>
-            HandleEmailAsync(parseResult, cancellationToken, (builder, pr, configuration) =>
+            HandleEmailAsync(parseResult, cancellationToken, (builder, pr, configuration, _) =>
             {
                 var outputValue = pr.GetValue(output);
 
@@ -432,7 +432,7 @@ public static class KarlCliCommandFactory
         );
 
         send.SetAction((parseResult, cancellationToken) =>
-            HandleEmailAsync(parseResult, cancellationToken, (builder, pr, configuration) =>
+            HandleEmailAsync(parseResult, cancellationToken, (builder, pr, configuration, errors) =>
             {
                 var smtpHostValue = pr.GetValue(smtpHost);
                 var smtpPortValue = pr.GetValue(smtpPort);
@@ -440,9 +440,15 @@ public static class KarlCliCommandFactory
                 var passwordValue = pr.GetValue(password);
                 var tlsValue = pr.GetValue(tls);
 
+                var smtpHostExplicit = pr.GetResult(smtpHost) is { Implicit: false };
+                if (!smtpHostExplicit && configuration["Karl:Smtp:Host"] is null)
+                {
+                    errors.AppendLine("No SMTP host was provided. Set it via --smtp-host, a JSON configuration file (Karl:Smtp:Host), or the KARL_Karl__Smtp__Host environment variable.");
+                }
+
                 builder.UseSmtp(options =>
                 {
-                    if (pr.GetResult(smtpHost) is { Implicit: false })
+                    if (smtpHostExplicit)
                     {
                         options.Host = smtpHostValue!;
                     }
@@ -475,7 +481,7 @@ public static class KarlCliCommandFactory
         );
 
         preview.SetAction((parseResult, cancellationToken) =>
-            HandleEmailAsync(parseResult, cancellationToken, (builder, _, _) => builder.UseStdOut())
+            HandleEmailAsync(parseResult, cancellationToken, (builder, _, _, _) => builder.UseStdOut())
         );
 
         root.Add(send);

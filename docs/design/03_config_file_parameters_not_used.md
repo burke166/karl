@@ -334,11 +334,19 @@ temp `karl.json` via `TemporaryDirectory` and invoking the command with `--json`
   file override it — no new CLI surface needed for that.
 - Changing config file discovery, precedence order, or supported file names/locations — §2
   confirmed that logic is already correct.
-- Revisiting `--smtp-host`'s `Required = true`, which currently makes it impossible to source the
-  host purely from config either. Same class of problem, but a separate, larger discussion (would
-  mean validating "host must come from somewhere, CLI or config" post-parse instead of via
-  `System.CommandLine`'s built-in required-option check) — flagged here for awareness, not
-  addressed by this fix.
+
+**Addendum (implemented as a follow-up):** `--smtp-host`'s `Required = true` was originally flagged
+here as out of scope, since it makes the host impossible to source from config alone regardless of
+this fix. It was addressed in a follow-up change: `Required = true` was dropped (the option is now
+optional, matching `Username`/`Password`), and a post-parse check in `send`'s
+`configureKarlTransport` lambda fails with a clear error — "No SMTP host was provided..." — when
+neither `--smtp-host` nor `Karl:Smtp:Host` supplied a value. A `DefaultValueFactory` defaulting to
+`SmtpTransportOptions.Host`'s own class default (`"localhost"`) was considered and rejected: it
+would have avoided needing the explicit check (the same reasoning as §4.2 — a CLI default matching
+the class default lets `Implicit: false` alone suffice), but it trades today's fast, clear
+parse-time failure for a silent connection attempt to `localhost` followed by a confusing
+connection-refused error at send time — the wrong trade per this project's "prefer explicit
+failures" principle.
 
 ## 8. Decisions
 

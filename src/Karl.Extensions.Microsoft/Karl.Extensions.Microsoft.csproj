@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<PackageId>Karl.Extensions.Microsoft</PackageId>
-		<Version>1.3.1</Version>
+		<Version>1.3.2</Version>
 		<Authors>Christopher Burke</Authors>
 		<Description>A package to use Karl with Microsoft's DI container.</Description>
 		<PackageTags>smtp email</PackageTags>

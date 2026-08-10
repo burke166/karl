@@ -53,6 +53,21 @@ KARL_Karl__Smtp__Port=587
 KARL_Karl__Smtp__SecurityMode=StartTlsRequired
 ```
 
+### Configuration Precedence
+
+For `Karl:Smtp:*`/`Karl:File:*` settings, a command-line flag always wins over a config file value,
+and a config file value always wins over `Karl.Cli`'s own built-in defaults:
+
+| Setting | CLI flag | Config key | Built-in default |
+|---|---|---|---|
+| SMTP host | `--smtp-host` | `Karl:Smtp:Host` | none — see below |
+| SMTP port | `--smtp-port` | `Karl:Smtp:Port` | `587` |
+| SMTP username | `--username` | `Karl:Smtp:Username` | *(none)* |
+| SMTP password | `--password` | `Karl:Smtp:Password` | *(none)* |
+| STARTTLS mode | `--tls` | `Karl:Smtp:SecurityMode` | `StartTlsRequired` |
+| File output directory | `--output` | `Karl:File:DirectoryPath` | `emails` |
+| File name prefix | *(none)* | `Karl:File:FileNamePrefix` | `email` |
+
 `send` requires an SMTP host to be specified *somewhere* — via `--smtp-host`, `Karl:Smtp:Host` in a
 config file, or `KARL_Karl__Smtp__Host` — and fails fast with a clear error if none of them supply
 one, rather than silently attempting to connect to a default host.
@@ -159,6 +174,9 @@ karl file \
   --body "This message is written to disk." \
   --output ./mail-output
 ```
+
+Written files are named with an `email` prefix by default (e.g. `email_20260810_123456_789.txt`).
+There is no `--file-name-prefix` flag; set `Karl:File:FileNamePrefix` in a config file to change it.
 
 ## StdOut Mode
 

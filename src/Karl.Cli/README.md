@@ -53,6 +53,12 @@ KARL_Karl__Smtp__Port=587
 KARL_Karl__Smtp__SecurityMode=StartTlsRequired
 ```
 
+> **Note:** `--smtp-host` currently must be passed on the command line for `send` — it cannot yet
+> be satisfied by `Karl:Smtp:Host` in a config file or a `KARL_Karl__Smtp__Host` environment
+> variable alone, even though every other SMTP setting can be. Loosening this so an SMTP host only
+> needs to be specified *somewhere* in the configuration (CLI flag, config file, or environment
+> variable) is a planned fix.
+
 ## Send Using a Template
 
 ```bash

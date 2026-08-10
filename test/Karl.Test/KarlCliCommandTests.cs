@@ -1,5 +1,7 @@
+using System.Text.Json;
 using Karl.Cli;
 using Karl.Models;
+using Karl.Transport.File;
 using Karl.Transport.Smtp;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -216,6 +218,209 @@ public class KarlCliCommandTests
         Assert.Equal(0, exitCode);
         Assert.NotNull(capture.LastSmtpOptions);
         Assert.Equal("StartTlsRequired", capture.LastSmtpOptions!.SecurityMode);
+    }
+
+    [Fact]
+    public async Task Send_JsonConfigPort_UsedWhenSmtpPortFlagNotProvided()
+    {
+        var tempDir = CreateTempDirectory();
+
+        try
+        {
+            var jsonPath = Path.Combine(tempDir, "karl.json");
+            await File.WriteAllTextAsync(jsonPath, """{"Karl":{"Smtp":{"Port":2525}}}""");
+
+            var capture = new CaptureSink();
+            var exitCode = await InvokeAsync(
+                ["send", "--from", "from@example.com", "--to", "to@example.com", "--subject", "Subject", "--body", "Body", "--smtp-host", "smtp.example.com", "--json", jsonPath],
+                CreateCaptureOptions(capture));
+
+            Assert.Equal(0, exitCode);
+            Assert.NotNull(capture.LastSmtpOptions);
+            Assert.Equal(2525, capture.LastSmtpOptions!.Port);
+        }
+        finally
+        {
+            DeleteDirectory(tempDir);
+        }
+    }
+
+    [Fact]
+    public async Task Send_JsonConfigUsernamePassword_UsedWhenFlagsNotProvided()
+    {
+        var tempDir = CreateTempDirectory();
+
+        try
+        {
+            var jsonPath = Path.Combine(tempDir, "karl.json");
+            await File.WriteAllTextAsync(jsonPath, """{"Karl":{"Smtp":{"Username":"svc-mailer","Password":"s3cret"}}}""");
+
+            var capture = new CaptureSink();
+            var exitCode = await InvokeAsync(
+                ["send", "--from", "from@example.com", "--to", "to@example.com", "--subject", "Subject", "--body", "Body", "--smtp-host", "smtp.example.com", "--json", jsonPath],
+                CreateCaptureOptions(capture));
+
+            Assert.Equal(0, exitCode);
+            Assert.NotNull(capture.LastSmtpOptions);
+            Assert.Equal("svc-mailer", capture.LastSmtpOptions!.Username);
+            Assert.Equal("s3cret", capture.LastSmtpOptions.Password);
+        }
+        finally
+        {
+            DeleteDirectory(tempDir);
+        }
+    }
+
+    [Fact]
+    public async Task Send_JsonConfigSecurityMode_UsedWhenTlsFlagNotProvided()
+    {
+        var tempDir = CreateTempDirectory();
+
+        try
+        {
+            var jsonPath = Path.Combine(tempDir, "karl.json");
+            await File.WriteAllTextAsync(jsonPath, """{"Karl":{"Smtp":{"SecurityMode":"StartTlsWhenAvailable"}}}""");
+
+            var capture = new CaptureSink();
+            var exitCode = await InvokeAsync(
+                ["send", "--from", "from@example.com", "--to", "to@example.com", "--subject", "Subject", "--body", "Body", "--smtp-host", "smtp.example.com", "--json", jsonPath],
+                CreateCaptureOptions(capture));
+
+            Assert.Equal(0, exitCode);
+            Assert.NotNull(capture.LastSmtpOptions);
+            Assert.Equal("StartTlsWhenAvailable", capture.LastSmtpOptions!.SecurityMode);
+        }
+        finally
+        {
+            DeleteDirectory(tempDir);
+        }
+    }
+
+    [Fact]
+    public async Task Send_CliSmtpPort_OverridesJsonConfig()
+    {
+        var tempDir = CreateTempDirectory();
+
+        try
+        {
+            var jsonPath = Path.Combine(tempDir, "karl.json");
+            await File.WriteAllTextAsync(jsonPath, """{"Karl":{"Smtp":{"Port":2525}}}""");
+
+            var capture = new CaptureSink();
+            var exitCode = await InvokeAsync(
+                ["send", "--from", "from@example.com", "--to", "to@example.com", "--subject", "Subject", "--body", "Body", "--smtp-host", "smtp.example.com", "--smtp-port", "4025", "--json", jsonPath],
+                CreateCaptureOptions(capture));
+
+            Assert.Equal(0, exitCode);
+            Assert.NotNull(capture.LastSmtpOptions);
+            Assert.Equal(4025, capture.LastSmtpOptions!.Port);
+        }
+        finally
+        {
+            DeleteDirectory(tempDir);
+        }
+    }
+
+    [Fact]
+    public async Task File_JsonConfigFileNamePrefix_UsedWhenSet()
+    {
+        var tempDir = CreateTempDirectory();
+
+        try
+        {
+            var jsonPath = Path.Combine(tempDir, "karl.json");
+            await File.WriteAllTextAsync(jsonPath, """{"Karl":{"File":{"FileNamePrefix":"outbound"}}}""");
+
+            var capture = new CaptureSink();
+            var exitCode = await InvokeAsync(
+                ["file", "--from", "from@example.com", "--to", "to@example.com", "--subject", "Subject", "--body", "Body", "--json", jsonPath],
+                CreateCaptureOptions(capture));
+
+            Assert.Equal(0, exitCode);
+            Assert.NotNull(capture.LastFileOptions);
+            Assert.Equal("outbound", capture.LastFileOptions!.FileNamePrefix);
+        }
+        finally
+        {
+            DeleteDirectory(tempDir);
+        }
+    }
+
+    [Fact]
+    public async Task File_JsonConfigDirectoryPath_UsedWhenOutputFlagNotProvided()
+    {
+        var tempDir = CreateTempDirectory();
+
+        try
+        {
+            var configuredDirectory = Path.Combine(tempDir, "configured-output");
+            var jsonPath = Path.Combine(tempDir, "karl.json");
+            await File.WriteAllTextAsync(jsonPath, JsonSerializer.Serialize(new { Karl = new { File = new { DirectoryPath = configuredDirectory } } }));
+
+            var capture = new CaptureSink();
+            var exitCode = await InvokeAsync(
+                ["file", "--from", "from@example.com", "--to", "to@example.com", "--subject", "Subject", "--body", "Body", "--json", jsonPath],
+                CreateCaptureOptions(capture));
+
+            Assert.Equal(0, exitCode);
+            Assert.NotNull(capture.LastFileOptions);
+            Assert.Equal(configuredDirectory, capture.LastFileOptions!.DirectoryPath);
+        }
+        finally
+        {
+            DeleteDirectory(tempDir);
+        }
+    }
+
+    [Fact]
+    public async Task File_CliOutput_OverridesJsonConfigDirectoryPath()
+    {
+        var tempDir = CreateTempDirectory();
+
+        try
+        {
+            var configuredDirectory = Path.Combine(tempDir, "configured-output");
+            var cliDirectory = Path.Combine(tempDir, "cli-output");
+            var jsonPath = Path.Combine(tempDir, "karl.json");
+            await File.WriteAllTextAsync(jsonPath, JsonSerializer.Serialize(new { Karl = new { File = new { DirectoryPath = configuredDirectory } } }));
+
+            var capture = new CaptureSink();
+            var exitCode = await InvokeAsync(
+                ["file", "--from", "from@example.com", "--to", "to@example.com", "--subject", "Subject", "--body", "Body", "--json", jsonPath, "--output", cliDirectory],
+                CreateCaptureOptions(capture));
+
+            Assert.Equal(0, exitCode);
+            Assert.NotNull(capture.LastFileOptions);
+            Assert.Equal(cliDirectory, capture.LastFileOptions!.DirectoryPath);
+        }
+        finally
+        {
+            DeleteDirectory(tempDir);
+        }
+    }
+
+    [Fact]
+    public async Task File_NoJsonConfigNoFlag_DefaultsToEmailsDirectoryAndEmailPrefix()
+    {
+        var tempDir = CreateTempDirectory();
+
+        try
+        {
+            var capture = new CaptureSink();
+            var exitCode = await InvokeAsync(
+                ["file", "--from", "from@example.com", "--to", "to@example.com", "--subject", "Subject", "--body", "Body"],
+                CreateCaptureOptions(capture),
+                currentDirectory: tempDir);
+
+            Assert.Equal(0, exitCode);
+            Assert.NotNull(capture.LastFileOptions);
+            Assert.Equal("emails", capture.LastFileOptions!.DirectoryPath);
+            Assert.Equal("email", capture.LastFileOptions.FileNamePrefix);
+        }
+        finally
+        {
+            DeleteDirectory(tempDir);
+        }
     }
 
     [Fact]
@@ -676,6 +881,7 @@ public class KarlCliCommandTests
     {
         public EmailMessage? LastMessage { get; set; }
         public SmtpTransportOptions? LastSmtpOptions { get; set; }
+        public FileTransportOptions? LastFileOptions { get; set; }
         public List<EmailMessage> SentMessages { get; } = new();
         public string? FailOnToAddress { get; set; }
     }
@@ -712,6 +918,17 @@ public class KarlCliCommandTests
                     SecurityMode = smtpOptions.Value.SecurityMode
                 };
             }
+
+            var fileOptions = _serviceProvider.GetService<IOptions<FileTransportOptions>>();
+            if (fileOptions is not null)
+            {
+                _capture.LastFileOptions = new FileTransportOptions
+                {
+                    DirectoryPath = fileOptions.Value.DirectoryPath,
+                    FileNamePrefix = fileOptions.Value.FileNamePrefix
+                };
+            }
+
             return Task.CompletedTask;
         }
     }

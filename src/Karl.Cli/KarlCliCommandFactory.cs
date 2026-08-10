@@ -196,7 +196,7 @@ public static class KarlCliCommandFactory
 
         AddCommonOptions(preview);
 
-        async Task<int> HandleEmailAsync(ParseResult parseResult, CancellationToken cancellationToken, Action<IKarlBuilder, ParseResult> configureKarlTransport)
+        async Task<int> HandleEmailAsync(ParseResult parseResult, CancellationToken cancellationToken, Action<IKarlBuilder, ParseResult, IConfiguration> configureKarlTransport)
         {
             var verboseValue = parseResult.GetValue(verbose);
             var fromValue = parseResult.GetValue(from);
@@ -221,7 +221,7 @@ public static class KarlCliCommandFactory
             var karlBuilder = services.AddKarl();
             var configuration = loadConfiguration(jsonPathValue);
             karlBuilder.UseConfiguration(configuration);
-            configureKarlTransport(karlBuilder, parseResult);
+            configureKarlTransport(karlBuilder, parseResult, configuration);
             karlBuilder.UseScribanTemplates();
             factoryOptions?.ConfigureServices?.Invoke(services);
 
@@ -408,20 +408,31 @@ public static class KarlCliCommandFactory
         }
 
         file.SetAction((parseResult, cancellationToken) =>
-            HandleEmailAsync(parseResult, cancellationToken, (builder, pr) =>
+            HandleEmailAsync(parseResult, cancellationToken, (builder, pr, configuration) =>
             {
-                var outputValue = pr.GetValue(output) ?? "emails";
+                var outputValue = pr.GetValue(output);
 
                 builder.UseFile(options =>
                 {
-                    options.DirectoryPath = outputValue;
-                    options.FileNamePrefix = "email";
+                    if (pr.GetResult(output) is { Implicit: false })
+                    {
+                        options.DirectoryPath = outputValue!;
+                    }
+                    else if (configuration["Karl:File:DirectoryPath"] is null)
+                    {
+                        options.DirectoryPath = "emails";
+                    }
+
+                    if (configuration["Karl:File:FileNamePrefix"] is null)
+                    {
+                        options.FileNamePrefix = "email";
+                    }
                 });
             })
         );
 
         send.SetAction((parseResult, cancellationToken) =>
-            HandleEmailAsync(parseResult, cancellationToken, (builder, pr) =>
+            HandleEmailAsync(parseResult, cancellationToken, (builder, pr, configuration) =>
             {
                 var smtpHostValue = pr.GetValue(smtpHost);
                 var smtpPortValue = pr.GetValue(smtpPort);
@@ -431,17 +442,40 @@ public static class KarlCliCommandFactory
 
                 builder.UseSmtp(options =>
                 {
-                    options.Host = smtpHostValue ?? "localhost";
-                    options.Port = smtpPortValue != 0 ? smtpPortValue : 25;
-                    options.Username = usernameValue ?? string.Empty;
-                    options.Password = passwordValue ?? string.Empty;
-                    options.SecurityMode = string.IsNullOrWhiteSpace(tlsValue) ? "StartTlsRequired" : tlsValue;
+                    if (pr.GetResult(smtpHost) is { Implicit: false })
+                    {
+                        options.Host = smtpHostValue!;
+                    }
+
+                    if (pr.GetResult(smtpPort) is { Implicit: false })
+                    {
+                        options.Port = smtpPortValue;
+                    }
+                    else if (configuration["Karl:Smtp:Port"] is null)
+                    {
+                        options.Port = 587;
+                    }
+
+                    if (pr.GetResult(username) is { Implicit: false })
+                    {
+                        options.Username = usernameValue ?? string.Empty;
+                    }
+
+                    if (pr.GetResult(password) is { Implicit: false })
+                    {
+                        options.Password = passwordValue ?? string.Empty;
+                    }
+
+                    if (pr.GetResult(tls) is { Implicit: false })
+                    {
+                        options.SecurityMode = tlsValue!;
+                    }
                 });
             })
         );
 
         preview.SetAction((parseResult, cancellationToken) =>
-            HandleEmailAsync(parseResult, cancellationToken, (builder, _) => builder.UseStdOut())
+            HandleEmailAsync(parseResult, cancellationToken, (builder, _, _) => builder.UseStdOut())
         );
 
         root.Add(send);

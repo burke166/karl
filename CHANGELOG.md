@@ -6,6 +6,18 @@ package (and `Karl.Cli`) is versioned independently in its own `.csproj`;
 this file tracks releases of the repository as a whole, and each entry below
 notes which package it affects.
 
+## [1.3.3] - 2026-08-28
+
+### Fixed
+
+- `Karl.Transport.Smtp`: `EmailMessage.Headers` (e.g. `Reply-To`) was
+  never applied to the outgoing MIME message — `SmtpTransport` only ever
+  mapped `From`/`To`/`Cc`/`Bcc`/`Subject`/`Body`/`Attachments`, so any
+  custom header a caller set had silently no effect on the actual sent
+  email. Each header is now added to the underlying `MimeMessage`, so a
+  well-known header like `Reply-To` correctly populates MimeKit's
+  corresponding structured property.
+
 ## [1.3.2] - 2026-08-10
 
 ### Fixed

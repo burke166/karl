@@ -183,6 +183,33 @@ public class SmtpTransportTests
     }
 
     [Fact]
+    public async Task SendAsync_AppliesCustomHeadersToTheMimeMessage()
+    {
+        var fakeClient = new FakeSmtpClientAdapter();
+        var sut = CreateSut(fakeClient);
+        var message = CreateMessage();
+        message.Headers["Reply-To"] = "submitter@example.com";
+        message.Headers["X-Custom-Header"] = "custom-value";
+
+        await sut.SendAsync(message);
+
+        var sent = fakeClient.SentMessage!;
+        Assert.Single(sent.ReplyTo.Mailboxes, mailbox => mailbox.Address == "submitter@example.com");
+        Assert.Equal("custom-value", sent.Headers["X-Custom-Header"]);
+    }
+
+    [Fact]
+    public async Task SendAsync_WithNoHeaders_DoesNotAddAnyExtraHeaders()
+    {
+        var fakeClient = new FakeSmtpClientAdapter();
+        var sut = CreateSut(fakeClient);
+
+        await sut.SendAsync(CreateMessage());
+
+        Assert.Empty(fakeClient.SentMessage!.ReplyTo);
+    }
+
+    [Fact]
     public async Task SendAsync_WithAttachments_AddsThemToTheMimeMessage()
     {
         var fakeClient = new FakeSmtpClientAdapter();

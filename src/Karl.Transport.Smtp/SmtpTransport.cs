@@ -45,6 +45,11 @@ public class SmtpTransport : IEmailTransport
 
         mimeMessage.Subject = message.Subject;
 
+        foreach (var header in message.Headers)
+        {
+            mimeMessage.Headers.Add(header.Key, header.Value);
+        }
+
         var bodyBuilder = new BodyBuilder
         {
             TextBody = message.Body.Text,

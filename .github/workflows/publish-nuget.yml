@@ -8,6 +8,8 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -41,3 +43,22 @@ jobs:
           --api-key ${{ secrets.NUGET_API_KEY }}
           --source https://api.nuget.org/v3/index.json
           --skip-duplicate
+
+      # Pulls the section for this tag's version out of CHANGELOG.md (between its
+      # "## [X.Y.Z]" heading and the next "## [" heading) to use as the release body,
+      # so release notes don't have to be written twice.
+      - name: Extract changelog section
+        run: >
+          awk -v ver="${GITHUB_REF_NAME#v}" '
+          index($0, "## [" ver "]") == 1 { found=1; next }
+          found && index($0, "## [") == 1 { exit }
+          found { print }
+          ' CHANGELOG.md > release-notes.md
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >
+          gh release create "${GITHUB_REF_NAME}"
+          --title "${GITHUB_REF_NAME}"
+          --notes-file release-notes.md

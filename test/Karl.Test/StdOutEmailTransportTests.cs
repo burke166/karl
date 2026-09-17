@@ -80,6 +80,29 @@ public sealed class StdOutEmailTransportTests
     }
 
     [Fact]
+    public async Task SendAsync_WithReplyTo_WritesReplyToLine()
+    {
+        var transport = new StdOutEmailTransport();
+        var message = CreateBaseMessage();
+        message.ReplyTo.Add(new EmailAddress("submitter@example.com"));
+
+        var output = await CaptureOutputAsync(() => transport.SendAsync(message));
+
+        Assert.Contains("Reply-To: submitter@example.com", output);
+    }
+
+    [Fact]
+    public async Task SendAsync_WithoutReplyTo_DoesNotWriteReplyToLine()
+    {
+        var transport = new StdOutEmailTransport();
+        var message = CreateBaseMessage();
+
+        var output = await CaptureOutputAsync(() => transport.SendAsync(message));
+
+        Assert.DoesNotContain("Reply-To:", output);
+    }
+
+    [Fact]
     public async Task SendAsync_WithTextBody_WritesTextSection()
     {
         var transport = new StdOutEmailTransport();

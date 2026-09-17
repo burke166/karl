@@ -79,6 +79,7 @@ public class SmtpTransportTests
         message.To.Add(new EmailAddress("to@example.com", "To Name"));
         message.Cc.Add(new EmailAddress("cc@example.com", "Cc Name"));
         message.Bcc.Add(new EmailAddress("bcc@example.com", "Bcc Name"));
+        message.ReplyTo.Add(new EmailAddress("reply@example.com", "Reply Name"));
 
         await sut.SendAsync(message);
 
@@ -89,8 +90,21 @@ public class SmtpTransportTests
         Assert.Equal("to@example.com", ((MailboxAddress)sent.To[0]).Address);
         Assert.Equal("cc@example.com", ((MailboxAddress)sent.Cc[0]).Address);
         Assert.Equal("bcc@example.com", ((MailboxAddress)sent.Bcc[0]).Address);
+        Assert.Equal("reply@example.com", ((MailboxAddress)sent.ReplyTo[0]).Address);
+        Assert.Equal("Reply Name", ((MailboxAddress)sent.ReplyTo[0]).Name);
         var textBody = Assert.IsType<TextPart>(sent.Body);
         Assert.Equal("plain text body", textBody.Text);
+    }
+
+    [Fact]
+    public async Task SendAsync_WithoutReplyTo_LeavesReplyToEmpty()
+    {
+        var fakeClient = new FakeSmtpClientAdapter();
+        var sut = CreateSut(fakeClient);
+
+        await sut.SendAsync(CreateMessage());
+
+        Assert.Empty(fakeClient.SentMessage!.ReplyTo);
     }
 
     [Fact]

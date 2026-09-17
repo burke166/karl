@@ -188,6 +188,36 @@ public class WelcomeService
 }
 ```
 
+`MailBuilder`'s full method set: `From`, `To`, `Cc`, `Bcc`, `ReplyTo`, `Subject`, `TextBody`,
+`HtmlBody`, `AttachFile`, `AttachStream`, `Build`. `From`/`To`/`Cc`/`Bcc`/`ReplyTo` all take the
+same `(string address, string? name = null)` shape — an address only, or an address plus a
+display name; there's no overload that accepts a list or a `Dictionary<address, name>` directly.
+`To`, `Cc`, `Bcc`, and `ReplyTo` are each repeatable — call them multiple times to add multiple
+recipients, the same way `AttachFile`/`AttachStream` can be called more than once:
+
+```csharp
+await emailService.SendAsync(
+    new MailBuilder()
+        .From("noreply@example.com", "No Reply")
+        .To("first@example.com", "First User")
+        .To("second@example.com", "Second User")
+        .Cc("manager@example.com")
+        .ReplyTo("submissions@example.com", "Submissions")
+        .Subject("Welcome")
+        .HtmlBody("<h1>Hello!</h1>")
+        .Build());
+```
+
+`TextBody` and `HtmlBody` are independent — Karl never derives one from the other. Call both if
+you want a `multipart/alternative` message with a plain-text fallback for clients that don't
+render HTML; call only one if that's all you need.
+
+`IEmailService.SendAsync`/`IEmailTransport.SendAsync` return a plain `Task`, not `bool` and not a
+result record. A delivery failure (auth rejected, connection refused, relay error, ...) surfaces
+as an exception thrown out of `SendAsync` — typically one of MailKit's own exception types for
+`Karl.Transport.Smtp` — rather than a `false` return value. If your code needs a boolean/logged
+outcome instead of a thrown exception, wrap the call in your own try/catch.
+
 Attach a local file or a caller-supplied stream with `AttachFile`/`AttachStream`:
 
 ```csharp
@@ -297,6 +327,17 @@ builder.Services.AddKarl().UseSmtp(options =>
     options.SecurityMode = "StartTlsRequired";
 });
 ```
+
+`SecurityMode` is a plain `string` (not an enum), matched case-insensitively against `"None"`,
+`"ImplicitTls"`, `"StartTlsRequired"`, and `"StartTlsWhenAvailable"` — mapping to MailKit's
+`SecureSocketOptions.None`/`SslOnConnect`/`StartTls`/`StartTlsWhenAvailable` respectively. An
+unrecognized value silently falls back to `StartTlsRequired` rather than throwing, so double-check
+spelling if a connection isn't behaving as expected.
+
+`Username`/`Password` are optional: `SmtpTransport` only calls `Authenticate` when `Username` is
+non-empty. Leaving both unset in `SmtpTransportOptions` (or the `Karl:Smtp` config section) sends
+over an unauthenticated connection — the right setting for an internal relay that accepts mail by
+IP/network rather than credentials.
 
 ### File Transport
 

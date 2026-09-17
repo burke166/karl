@@ -30,6 +30,12 @@ public class MailBuilder
         return this;
     }
 
+    public MailBuilder ReplyTo(string address, string? name = null)
+    {
+        _message.ReplyTo.Add(new EmailAddress(address, name));
+        return this;
+    }
+
     public MailBuilder Subject(string subject)
     {
         _message.Subject = subject;

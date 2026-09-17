@@ -6,6 +6,7 @@ public sealed class EmailMessage
     public List<EmailAddress> To { get; } = new();
     public List<EmailAddress> Cc { get; } = new();
     public List<EmailAddress> Bcc { get; } = new();
+    public List<EmailAddress> ReplyTo { get; } = new();
 
     public string Subject { get; set; } = string.Empty;
 

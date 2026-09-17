@@ -6,6 +6,31 @@ package (and `Karl.Cli`) is versioned independently in its own `.csproj`;
 this file tracks releases of the repository as a whole, and each entry below
 notes which package it affects.
 
+## [1.4.0] - 2026-09-17
+
+### Added
+
+- `Karl.Abstractions`: `EmailMessage.ReplyTo`, a `List<EmailAddress>` alongside `To`/`Cc`/`Bcc`.
+- `Karl`: `MailBuilder.ReplyTo(address, name)`, mirroring the existing `To`/`Cc`/`Bcc` methods —
+  repeatable for messages that need more than one reply-to address.
+- `Karl.Transport.Smtp`: `EmailMessage.ReplyTo` addresses are now mapped onto the outgoing
+  `MimeMessage.ReplyTo` list directly. This is now the primary way to set Reply-To; the
+  `EmailMessage.Headers["Reply-To"]` escape hatch (1.3.3) still works and populates the same
+  underlying MimeKit list, but combining both on one message will produce duplicate/extra
+  addresses rather than one overriding the other — use one or the other per message, not both.
+- `Karl.Transport.File` / `Karl.Transport.StdOut`: a `Reply-To:` line is added to the rendered
+  output when a message has one or more reply-to addresses, following the same pattern as the
+  existing `Cc:`/`Bcc:` lines.
+
+### Documentation
+
+- `README.md`: documents `MailBuilder`'s full method set, that `To`/`Cc`/`Bcc`/`ReplyTo` are each
+  repeatable for multiple recipients, that `TextBody`/`HtmlBody` are independent (Karl never
+  derives one from the other), that `SendAsync` returns a plain `Task` and throws on failure rather
+  than returning `bool` or a result record, the exact `SecurityMode` string values and its silent
+  fallback to `StartTlsRequired` for an unrecognized value, and that omitting `Username`/`Password`
+  sends over an unauthenticated SMTP connection.
+
 ## [1.3.3] - 2026-08-28
 
 ### Fixed

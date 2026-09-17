@@ -12,6 +12,7 @@ public class MailBuilderTests
             .To("to@example.com", "To User")
             .Cc("cc@example.com")
             .Bcc("bcc@example.com")
+            .ReplyTo("submitter@example.com", "Submitter")
             .Subject("Subject line")
             .TextBody("plain text")
             .HtmlBody("<p>html</p>")
@@ -21,9 +22,21 @@ public class MailBuilderTests
         Assert.Single(message.To);
         Assert.Single(message.Cc);
         Assert.Single(message.Bcc);
+        Assert.Equal("Submitter <submitter@example.com>", Assert.Single(message.ReplyTo).ToString());
         Assert.Equal("Subject line", message.Subject);
         Assert.Equal("plain text", message.Body.Text);
         Assert.Equal("<p>html</p>", message.Body.Html);
+    }
+
+    [Fact]
+    public void ReplyTo_CalledMultipleTimes_AddsEachAddress()
+    {
+        var message = new MailBuilder()
+            .ReplyTo("first@example.com")
+            .ReplyTo("second@example.com")
+            .Build();
+
+        Assert.Equal(2, message.ReplyTo.Count);
     }
 
     [Fact]

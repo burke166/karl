@@ -122,6 +122,36 @@ public class FileEmailTransportTests
     }
 
     [Fact]
+    public async Task SendAsync_WithReplyTo_WritesReplyToLine()
+    {
+        using var tempDirectory = TemporaryDirectory.Create();
+        var sut = CreateSut(tempDirectory.Path);
+        var message = CreateMessage();
+        message.ReplyTo.Add(new EmailAddress("submitter@example.com", "Submitter"));
+
+        await sut.SendAsync(message);
+
+        var filePath = Assert.Single(Directory.GetFiles(tempDirectory.Path));
+        var content = await File.ReadAllTextAsync(filePath);
+
+        Assert.Contains("Reply-To: Submitter <submitter@example.com>", content, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task SendAsync_WithoutReplyTo_OmitsReplyToLine()
+    {
+        using var tempDirectory = TemporaryDirectory.Create();
+        var sut = CreateSut(tempDirectory.Path);
+
+        await sut.SendAsync(CreateMessage());
+
+        var filePath = Assert.Single(Directory.GetFiles(tempDirectory.Path));
+        var content = await File.ReadAllTextAsync(filePath);
+
+        Assert.DoesNotContain("Reply-To:", content, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task SendAsync_PassesCancellationToken()
     {
         using var tempDirectory = TemporaryDirectory.Create();

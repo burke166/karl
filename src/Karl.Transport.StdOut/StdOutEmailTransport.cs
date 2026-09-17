@@ -20,6 +20,8 @@ public class StdOutEmailTransport : IEmailTransport
             sb.AppendLine($"Cc: {string.Join(", ", message.Cc)}");
         if (message.Bcc.Count > 0)
             sb.AppendLine($"Bcc: {string.Join(", ", message.Bcc)}");
+        if (message.ReplyTo.Count > 0)
+            sb.AppendLine($"Reply-To: {string.Join(", ", message.ReplyTo)}");
         sb.AppendLine($"Subject: {message.Subject}");
         if (message.Attachments.Count > 0)
             sb.AppendLine($"Attachments: {string.Join(", ", message.Attachments.Select(a => $"{a.FileName} ({a.ContentType})"))}");

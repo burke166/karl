@@ -43,6 +43,11 @@ public class SmtpTransport : IEmailTransport
             mimeMessage.Bcc.Add(new MailboxAddress(bcc.Name ?? string.Empty, bcc.Address));
         }
 
+        foreach (var replyTo in message.ReplyTo)
+        {
+            mimeMessage.ReplyTo.Add(new MailboxAddress(replyTo.Name ?? string.Empty, replyTo.Address));
+        }
+
         mimeMessage.Subject = message.Subject;
 
         foreach (var header in message.Headers)

@@ -78,13 +78,16 @@ public class SmtpTransport : IEmailTransport
 
             mimeMessage.Body = bodyBuilder.ToMessageBody();
 
-            var secureSocketOptions = _options.SecurityMode.ToLowerInvariant() switch
+            var secureSocketOptions = _options.SecurityMode switch
             {
-                "none" => SecureSocketOptions.None,
-                "implicittls" => SecureSocketOptions.SslOnConnect,
-                "starttlsrequired" => SecureSocketOptions.StartTls,
-                "starttlswhenavailable" => SecureSocketOptions.StartTlsWhenAvailable,
-                _ => SecureSocketOptions.StartTls
+                SmtpSecurityMode.None => SecureSocketOptions.None,
+                SmtpSecurityMode.ImplicitTls => SecureSocketOptions.SslOnConnect,
+                SmtpSecurityMode.StartTlsRequired => SecureSocketOptions.StartTls,
+                SmtpSecurityMode.StartTlsWhenAvailable => SecureSocketOptions.StartTlsWhenAvailable,
+                _ => throw new ArgumentOutOfRangeException(
+                    nameof(_options.SecurityMode),
+                    _options.SecurityMode,
+                    $"Unsupported {nameof(SmtpSecurityMode)} value.")
             };
 
             using var client = _smtpClientFactory.Create();

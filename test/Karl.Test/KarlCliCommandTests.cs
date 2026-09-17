@@ -191,7 +191,7 @@ public class KarlCliCommandTests
         Assert.Equal(2525, capture.LastSmtpOptions.Port);
         Assert.Equal("user", capture.LastSmtpOptions.Username);
         Assert.Equal("pass", capture.LastSmtpOptions.Password);
-        Assert.Equal("StartTlsWhenAvailable", capture.LastSmtpOptions.SecurityMode);
+        Assert.Equal(SmtpSecurityMode.StartTlsWhenAvailable, capture.LastSmtpOptions.SecurityMode);
     }
 
     [Fact]
@@ -289,7 +289,7 @@ public class KarlCliCommandTests
 
         Assert.Equal(0, exitCode);
         Assert.NotNull(capture.LastSmtpOptions);
-        Assert.Equal("StartTlsRequired", capture.LastSmtpOptions!.SecurityMode);
+        Assert.Equal(SmtpSecurityMode.StartTlsRequired, capture.LastSmtpOptions!.SecurityMode);
     }
 
     [Fact]
@@ -360,7 +360,7 @@ public class KarlCliCommandTests
 
             Assert.Equal(0, exitCode);
             Assert.NotNull(capture.LastSmtpOptions);
-            Assert.Equal("StartTlsWhenAvailable", capture.LastSmtpOptions!.SecurityMode);
+            Assert.Equal(SmtpSecurityMode.StartTlsWhenAvailable, capture.LastSmtpOptions!.SecurityMode);
         }
         finally
         {

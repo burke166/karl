@@ -48,12 +48,11 @@ public class SmtpTransportTests
     }
 
     [Theory]
-    [InlineData("none", SecureSocketOptions.None)]
-    [InlineData("implicittls", SecureSocketOptions.SslOnConnect)]
-    [InlineData("starttlsrequired", SecureSocketOptions.StartTls)]
-    [InlineData("starttlswhenavailable", SecureSocketOptions.StartTlsWhenAvailable)]
-    [InlineData("anything-else", SecureSocketOptions.StartTls)]
-    public async Task SendAsync_UsesExpectedSecureSocketOptions(string securityMode, SecureSocketOptions expected)
+    [InlineData(SmtpSecurityMode.None, SecureSocketOptions.None)]
+    [InlineData(SmtpSecurityMode.ImplicitTls, SecureSocketOptions.SslOnConnect)]
+    [InlineData(SmtpSecurityMode.StartTlsRequired, SecureSocketOptions.StartTls)]
+    [InlineData(SmtpSecurityMode.StartTlsWhenAvailable, SecureSocketOptions.StartTlsWhenAvailable)]
+    public async Task SendAsync_UsesExpectedSecureSocketOptions(SmtpSecurityMode securityMode, SecureSocketOptions expected)
     {
         var fakeClient = new FakeSmtpClientAdapter();
         var options = CreateOptions();
@@ -63,6 +62,17 @@ public class SmtpTransportTests
         await sut.SendAsync(CreateMessage());
 
         Assert.Equal(expected, fakeClient.SecureSocketOptions);
+    }
+
+    [Fact]
+    public async Task SendAsync_WithUndefinedSecurityMode_ThrowsArgumentOutOfRangeException()
+    {
+        var fakeClient = new FakeSmtpClientAdapter();
+        var options = CreateOptions();
+        options.SecurityMode = (SmtpSecurityMode)99;
+        var sut = new SmtpTransport(options, new FakeSmtpClientFactory(fakeClient));
+
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => sut.SendAsync(CreateMessage()));
     }
 
     [Fact]
@@ -287,7 +297,7 @@ public class SmtpTransportTests
         {
             Host = "smtp.example.com",
             Port = 2525,
-            SecurityMode = "StartTlsRequired",
+            SecurityMode = SmtpSecurityMode.StartTlsRequired,
             Username = "user",
             Password = "pass"
         };

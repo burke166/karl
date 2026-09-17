@@ -6,6 +6,34 @@ package (and `Karl.Cli`) is versioned independently in its own `.csproj`;
 this file tracks releases of the repository as a whole, and each entry below
 notes which package it affects.
 
+## [2.0.0] - 2026-09-17
+
+### Changed
+
+- **Breaking:** `Karl.Transport.Smtp`: `SmtpTransportOptions.SecurityMode` is now the
+  `SmtpSecurityMode` enum (`StartTlsRequired` (default), `None`, `ImplicitTls`,
+  `StartTlsWhenAvailable`) instead of a plain `string`. Code that assigns a string literal
+  (`options.SecurityMode = "StartTlsRequired"`) no longer compiles — use the enum member
+  (`options.SecurityMode = SmtpSecurityMode.StartTlsRequired`) instead.
+  `IConfiguration`/`karl.json`/`KARL_`-prefixed environment variable sources are unaffected: the
+  configuration binder already parses a string value into an enum by member name, so
+  `"SecurityMode": "StartTlsRequired"` in a JSON config file keeps working unchanged.
+- **Breaking:** an unrecognized `SecurityMode` value now throws `ArgumentOutOfRangeException` from
+  `SmtpTransport.SendAsync` instead of silently falling back to `StartTlsRequired`. With the old
+  `string`-typed property this fallback covered plausible typos; with the enum, the only way to
+  reach it is an explicit invalid cast (e.g. `(SmtpSecurityMode)99`), so failing loudly is more
+  useful than a silent, surprising fallback.
+- `Karl.Cli`: `--tls` (`Karl:Smtp:SecurityMode` / `KARL_Karl__Smtp__SecurityMode`) is now validated
+  against `SmtpSecurityMode`'s member names up front — an invalid value is now a clear parse error
+  listing the valid options, rather than silently sending over `StartTlsRequired`. Accepted string
+  values on the command line/config/environment are unchanged (`None`, `ImplicitTls`,
+  `StartTlsRequired`, `StartTlsWhenAvailable`).
+
+### Documentation
+
+- `README.md`: updated the SMTP examples and `SecurityMode` description for the new
+  `SmtpSecurityMode` enum and its throw-on-invalid-value behavior.
+
 ## [1.4.0] - 2026-09-17
 
 ### Added

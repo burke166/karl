@@ -103,6 +103,7 @@ Other assemblies are available as packages if you want to install just the porti
 ```csharp
 using Karl;
 using Karl.Extensions.Microsoft;
+using Karl.Transport.Smtp;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -114,7 +115,7 @@ builder.Services
     options.Port = 587;
     options.Username = "smtp-user";
     options.Password = "smtp-password";
-    options.SecurityMode = "StartTlsRequired";
+    options.SecurityMode = SmtpSecurityMode.StartTlsRequired;
 });
 
 var app = builder.Build();
@@ -161,6 +162,12 @@ builder.Services
   }
 }
 ```
+
+`SecurityMode` binds from `IConfiguration`/`karl.json`/`KARL_`-prefixed environment variables as its
+member name (`"None"`, `"ImplicitTls"`, `"StartTlsRequired"`, `"StartTlsWhenAvailable"`, matched
+case-insensitively) even though the property itself is the `SmtpSecurityMode` enum, not a
+`string` — the configuration binder parses a string value into an enum by name automatically, so
+the JSON above needs no changes for that.
 
 ### Sending an Email
 
@@ -317,6 +324,7 @@ Example:
 
 ```csharp
 using Karl.Extensions.Microsoft;
+using Karl.Transport.Smtp;
 
 builder.Services.AddKarl().UseSmtp(options =>
 {
@@ -324,15 +332,15 @@ builder.Services.AddKarl().UseSmtp(options =>
     options.Port = 587;
     options.Username = "username";
     options.Password = "password";
-    options.SecurityMode = "StartTlsRequired";
+    options.SecurityMode = SmtpSecurityMode.StartTlsRequired;
 });
 ```
 
-`SecurityMode` is a plain `string` (not an enum), matched case-insensitively against `"None"`,
-`"ImplicitTls"`, `"StartTlsRequired"`, and `"StartTlsWhenAvailable"` — mapping to MailKit's
-`SecureSocketOptions.None`/`SslOnConnect`/`StartTls`/`StartTlsWhenAvailable` respectively. An
-unrecognized value silently falls back to `StartTlsRequired` rather than throwing, so double-check
-spelling if a connection isn't behaving as expected.
+`SecurityMode` is an `SmtpSecurityMode` enum — `None`, `ImplicitTls`, `StartTlsRequired` (the
+default), or `StartTlsWhenAvailable` — mapping to MailKit's
+`SecureSocketOptions.None`/`SslOnConnect`/`StartTls`/`StartTlsWhenAvailable` respectively.
+`SmtpTransport.SendAsync` throws `ArgumentOutOfRangeException` for any other value (only reachable
+via an explicit invalid cast, e.g. `(SmtpSecurityMode)99` — not something normal usage can produce).
 
 `Username`/`Password` are optional: `SmtpTransport` only calls `Authenticate` when `Username` is
 non-empty. Leaving both unset in `SmtpTransportOptions` (or the `Karl:Smtp` config section) sends

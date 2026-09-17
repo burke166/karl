@@ -5,6 +5,7 @@ using System.Text.Json;
 using ComputerCodeBlue.Csv;
 using Karl.Extensions.Microsoft;
 using Karl.Models;
+using Karl.Transport.Smtp;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -152,7 +153,7 @@ public static class KarlCliCommandFactory
             DefaultValueFactory = _ => "emails"
         };
 
-        var tls = new Option<string>("--tls", ["-tls"])
+        var tls = new Option<SmtpSecurityMode>("--tls", ["-tls"])
         {
             Description = "STARTTLS behavior",
             Required = false
@@ -474,7 +475,7 @@ public static class KarlCliCommandFactory
 
                     if (pr.GetResult(tls) is { Implicit: false })
                     {
-                        options.SecurityMode = tlsValue!;
+                        options.SecurityMode = tlsValue;
                     }
                 });
             })

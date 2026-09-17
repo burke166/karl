@@ -76,7 +76,7 @@ public class ServiceCollectionExtensionsTests
             {
                 options.Host = "smtp.example.com";
                 options.Port = 2525;
-                options.SecurityMode = "StartTlsWhenAvailable";
+                options.SecurityMode = SmtpSecurityMode.StartTlsWhenAvailable;
                 options.Username = "user";
                 options.Password = "pass";
             });
@@ -88,7 +88,7 @@ public class ServiceCollectionExtensionsTests
         Assert.IsType<SmtpTransport>(emailTransport);
         Assert.Equal("smtp.example.com", options.Host);
         Assert.Equal(2525, options.Port);
-        Assert.Equal("StartTlsWhenAvailable", options.SecurityMode);
+        Assert.Equal(SmtpSecurityMode.StartTlsWhenAvailable, options.SecurityMode);
         Assert.Equal("user", options.Username);
         Assert.Equal("pass", options.Password);
     }
@@ -117,7 +117,7 @@ public class ServiceCollectionExtensionsTests
 
         Assert.Equal("smtp.example.com", options.Host);
         Assert.Equal(587, options.Port);
-        Assert.Equal("StartTlsRequired", options.SecurityMode);
+        Assert.Equal(SmtpSecurityMode.StartTlsRequired, options.SecurityMode);
     }
 
     [Fact]

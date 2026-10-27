@@ -12,7 +12,7 @@
     <DebugType>portable</DebugType>  
 
     <PackageId>Karl.Transport.Smtp</PackageId>
-    <Version>2.0.0</Version>
+    <Version>2.0.1</Version>
     <Authors>Christopher Burke</Authors>
     <Title>Karl SMTP Transport</Title>
     <Description>MailKit SMTP transport for Karl email delivery.</Description>
@@ -29,7 +29,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="MailKit" Version="4.17.0" />
+    <PackageReference Include="MailKit" Version="4.18.2" />
   </ItemGroup>
 
   <ItemGroup>

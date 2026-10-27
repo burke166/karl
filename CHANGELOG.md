@@ -6,6 +6,24 @@ package (and `Karl.Cli`) is versioned independently in its own `.csproj`;
 this file tracks releases of the repository as a whole, and each entry below
 notes which package it affects.
 
+## [2.0.1] - 2026-10-27
+
+### Security
+
+- `Karl.Transport.Smtp`: updated MailKit 4.17.0 → 4.18.2. MailKit's MimeKit dependency now
+  resolves `System.Security.Cryptography.Pkcs` 10.0.13, fixing two .NET denial-of-service
+  advisories in the previously resolved 8.0.1 (net8.0) / 10.0.0 (net10.0):
+  [CVE-2026-84008](https://github.com/advisories/GHSA-846f-f764-76mx) (High) and
+  [CVE-2026-70162](https://github.com/advisories/GHSA-2fmv-rv2c-59x7) (Moderate).
+  `Karl`, `Karl.Extensions.Microsoft`, and `Karl.Cli` pulled the vulnerable package in through
+  `Karl.Transport.Smtp`, so all four bump to 2.0.1 and now require `Karl.Transport.Smtp` 2.0.1.
+
+### Changed
+
+- Tests: migrated from the deprecated `xunit` 2.9.3 to `xunit.v3.mtp-off` 4.0.2 (with
+  `xunit.runner.visualstudio` 4.0.1). The `mtp-off` variant keeps the existing VSTest-based
+  `dotnet test` workflow unchanged on the .NET 10 SDK. No published package is affected.
+
 ## [2.0.0] - 2026-09-17
 
 ### Changed

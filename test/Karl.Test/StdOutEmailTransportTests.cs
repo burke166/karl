@@ -197,7 +197,7 @@ public sealed class StdOutEmailTransportTests
     {
         var transport = new StdOutEmailTransport();
 
-        await Assert.ThrowsAsync<ArgumentNullException>(() => transport.SendAsync(null!));
+        await Assert.ThrowsAsync<ArgumentNullException>(() => transport.SendAsync(null!, TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -206,7 +206,7 @@ public sealed class StdOutEmailTransportTests
         var transport = new StdOutEmailTransport();
         var message = CreateBaseMessage();
 
-        await transport.SendAsync(message);
+        await transport.SendAsync(message, TestContext.Current.CancellationToken);
     }
 
     private static EmailMessage CreateBaseMessage()

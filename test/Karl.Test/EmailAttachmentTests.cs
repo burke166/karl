@@ -9,7 +9,7 @@ public class EmailAttachmentTests
     {
         using var tempDirectory = TemporaryDirectory.Create();
         var filePath = Path.Combine(tempDirectory.Path, "invoice.pdf");
-        await File.WriteAllTextAsync(filePath, "content");
+        await File.WriteAllTextAsync(filePath, "content", TestContext.Current.CancellationToken);
 
         var attachment = EmailAttachment.FromFile(filePath);
 
@@ -74,16 +74,16 @@ public class EmailAttachmentTests
     {
         using var tempDirectory = TemporaryDirectory.Create();
         var filePath = Path.Combine(tempDirectory.Path, "invoice.pdf");
-        await File.WriteAllTextAsync(filePath, "first-read second-read");
+        await File.WriteAllTextAsync(filePath, "first-read second-read", TestContext.Current.CancellationToken);
 
         var attachment = EmailAttachment.FromFile(filePath);
 
-        await using (var first = await attachment.Source.OpenReadAsync())
+        await using (var first = await attachment.Source.OpenReadAsync(TestContext.Current.CancellationToken))
         {
             Assert.Equal(0, first.Position);
         }
 
-        await using (var second = await attachment.Source.OpenReadAsync())
+        await using (var second = await attachment.Source.OpenReadAsync(TestContext.Current.CancellationToken))
         {
             Assert.Equal(0, second.Position);
         }
@@ -94,7 +94,7 @@ public class EmailAttachmentTests
     {
         using var tempDirectory = TemporaryDirectory.Create();
         var filePath = Path.Combine(tempDirectory.Path, "invoice.pdf");
-        await File.WriteAllTextAsync(filePath, "content");
+        await File.WriteAllTextAsync(filePath, "content", TestContext.Current.CancellationToken);
 
         var attachment = EmailAttachment.FromFile(filePath);
 
@@ -131,9 +131,9 @@ public class EmailAttachmentTests
         using var stream = new MemoryStream();
         var attachment = EmailAttachment.FromStream(stream, "file.txt");
 
-        await attachment.Source.OpenReadAsync();
+        await attachment.Source.OpenReadAsync(TestContext.Current.CancellationToken);
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() => attachment.Source.OpenReadAsync());
+        await Assert.ThrowsAsync<InvalidOperationException>(() => attachment.Source.OpenReadAsync(TestContext.Current.CancellationToken));
     }
 
     [Fact]

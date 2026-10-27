@@ -17,7 +17,7 @@ public class SmtpTransportTests
         var sut = new SmtpTransport(options, new FakeSmtpClientFactory(fakeClient));
         var message = CreateMessage();
 
-        await sut.SendAsync(message);
+        await sut.SendAsync(message, TestContext.Current.CancellationToken);
 
         Assert.Equal(new[] { "Connect", "Send", "Disconnect" }, fakeClient.Calls);
     }
@@ -31,7 +31,7 @@ public class SmtpTransportTests
         options.Password = null;
         var sut = new SmtpTransport(options, new FakeSmtpClientFactory(fakeClient));
 
-        await sut.SendAsync(CreateMessage());
+        await sut.SendAsync(CreateMessage(), TestContext.Current.CancellationToken);
 
         Assert.DoesNotContain("Authenticate", fakeClient.Calls);
     }
@@ -42,7 +42,7 @@ public class SmtpTransportTests
         var fakeClient = new FakeSmtpClientAdapter();
         var sut = CreateSut(fakeClient);
 
-        await sut.SendAsync(CreateMessage());
+        await sut.SendAsync(CreateMessage(), TestContext.Current.CancellationToken);
 
         Assert.Equal(new[] { "Connect", "Authenticate", "Send", "Disconnect" }, fakeClient.Calls);
     }
@@ -59,7 +59,7 @@ public class SmtpTransportTests
         options.SecurityMode = securityMode;
         var sut = new SmtpTransport(options, new FakeSmtpClientFactory(fakeClient));
 
-        await sut.SendAsync(CreateMessage());
+        await sut.SendAsync(CreateMessage(), TestContext.Current.CancellationToken);
 
         Assert.Equal(expected, fakeClient.SecureSocketOptions);
     }
@@ -72,7 +72,7 @@ public class SmtpTransportTests
         options.SecurityMode = (SmtpSecurityMode)99;
         var sut = new SmtpTransport(options, new FakeSmtpClientFactory(fakeClient));
 
-        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => sut.SendAsync(CreateMessage()));
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => sut.SendAsync(CreateMessage(), TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -91,7 +91,7 @@ public class SmtpTransportTests
         message.Bcc.Add(new EmailAddress("bcc@example.com", "Bcc Name"));
         message.ReplyTo.Add(new EmailAddress("reply@example.com", "Reply Name"));
 
-        await sut.SendAsync(message);
+        await sut.SendAsync(message, TestContext.Current.CancellationToken);
 
         var sent = Assert.IsType<MimeMessage>(fakeClient.SentMessage);
         Assert.Equal("Subject Line", sent.Subject);
@@ -112,7 +112,7 @@ public class SmtpTransportTests
         var fakeClient = new FakeSmtpClientAdapter();
         var sut = CreateSut(fakeClient);
 
-        await sut.SendAsync(CreateMessage());
+        await sut.SendAsync(CreateMessage(), TestContext.Current.CancellationToken);
 
         Assert.Empty(fakeClient.SentMessage!.ReplyTo);
     }
@@ -129,7 +129,7 @@ public class SmtpTransportTests
             Html = "<p>html body</p>"
         };
 
-        await sut.SendAsync(message);
+        await sut.SendAsync(message, TestContext.Current.CancellationToken);
 
         var multipart = Assert.IsType<MultipartAlternative>(fakeClient.SentMessage!.Body);
         Assert.Contains(multipart.OfType<TextPart>(), part => part.IsPlain && part.Text == "text body");
@@ -160,7 +160,7 @@ public class SmtpTransportTests
         };
         var sut = CreateSut(fakeClient);
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() => sut.SendAsync(CreateMessage()));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => sut.SendAsync(CreateMessage(), TestContext.Current.CancellationToken));
 
         Assert.Equal(new[] { "Connect" }, fakeClient.Calls);
         Assert.DoesNotContain("Authenticate", fakeClient.Calls);
@@ -177,7 +177,7 @@ public class SmtpTransportTests
         };
         var sut = CreateSut(fakeClient);
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() => sut.SendAsync(CreateMessage()));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => sut.SendAsync(CreateMessage(), TestContext.Current.CancellationToken));
 
         Assert.Equal(new[] { "Connect", "Authenticate", "Disconnect" }, fakeClient.Calls);
         Assert.DoesNotContain("Send", fakeClient.Calls);
@@ -192,7 +192,7 @@ public class SmtpTransportTests
         };
         var sut = CreateSut(fakeClient);
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() => sut.SendAsync(CreateMessage()));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => sut.SendAsync(CreateMessage(), TestContext.Current.CancellationToken));
 
         Assert.Equal(new[] { "Connect", "Authenticate", "Send", "Disconnect" }, fakeClient.Calls);
     }
@@ -203,7 +203,7 @@ public class SmtpTransportTests
         var fakeClient = new FakeSmtpClientAdapter();
         var sut = CreateSut(fakeClient);
 
-        await Assert.ThrowsAsync<ArgumentNullException>(() => sut.SendAsync(null!));
+        await Assert.ThrowsAsync<ArgumentNullException>(() => sut.SendAsync(null!, TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -215,7 +215,7 @@ public class SmtpTransportTests
         message.Headers["Reply-To"] = "submitter@example.com";
         message.Headers["X-Custom-Header"] = "custom-value";
 
-        await sut.SendAsync(message);
+        await sut.SendAsync(message, TestContext.Current.CancellationToken);
 
         var sent = fakeClient.SentMessage!;
         Assert.Single(sent.ReplyTo.Mailboxes, mailbox => mailbox.Address == "submitter@example.com");
@@ -228,7 +228,7 @@ public class SmtpTransportTests
         var fakeClient = new FakeSmtpClientAdapter();
         var sut = CreateSut(fakeClient);
 
-        await sut.SendAsync(CreateMessage());
+        await sut.SendAsync(CreateMessage(), TestContext.Current.CancellationToken);
 
         Assert.Empty(fakeClient.SentMessage!.ReplyTo);
     }
@@ -244,7 +244,7 @@ public class SmtpTransportTests
         message.Attachments.Add(EmailAttachment.FromStream(firstStream, "first.pdf"));
         message.Attachments.Add(EmailAttachment.FromStream(secondStream, "second.txt"));
 
-        await sut.SendAsync(message);
+        await sut.SendAsync(message, TestContext.Current.CancellationToken);
 
         var attachments = fakeClient.SentMessage!.Attachments.OfType<MimePart>().ToList();
         Assert.Equal(2, attachments.Count);
@@ -257,14 +257,14 @@ public class SmtpTransportTests
     {
         using var tempDirectory = TemporaryDirectory.Create();
         var filePath = Path.Combine(tempDirectory.Path, "invoice.pdf");
-        await File.WriteAllTextAsync(filePath, "invoice content");
+        await File.WriteAllTextAsync(filePath, "invoice content", TestContext.Current.CancellationToken);
 
         var fakeClient = new FakeSmtpClientAdapter();
         var sut = CreateSut(fakeClient);
         var message = CreateMessage();
         message.Attachments.Add(EmailAttachment.FromFile(filePath));
 
-        await sut.SendAsync(message);
+        await sut.SendAsync(message, TestContext.Current.CancellationToken);
 
         // A FileStream left open without FileShare.Delete blocks deletion on Windows;
         // if this succeeds, SmtpTransport disposed the stream it opened.
@@ -281,7 +281,7 @@ public class SmtpTransportTests
         using var callerStream = new MemoryStream([1, 2, 3]);
         message.Attachments.Add(EmailAttachment.FromStream(callerStream, "invoice.pdf"));
 
-        await sut.SendAsync(message);
+        await sut.SendAsync(message, TestContext.Current.CancellationToken);
 
         Assert.True(callerStream.CanRead);
     }

@@ -11,7 +11,7 @@ public class FileEmailTransportTests
         using var tempDirectory = TemporaryDirectory.Create();
         var sut = CreateSut(tempDirectory.Path);
 
-        await sut.SendAsync(CreateMessage());
+        await sut.SendAsync(CreateMessage(), TestContext.Current.CancellationToken);
 
         var files = Directory.GetFiles(tempDirectory.Path);
         Assert.Single(files);
@@ -24,10 +24,10 @@ public class FileEmailTransportTests
         var sut = CreateSut(tempDirectory.Path);
         var message = CreateMessage();
 
-        await sut.SendAsync(message);
+        await sut.SendAsync(message, TestContext.Current.CancellationToken);
 
         var filePath = Assert.Single(Directory.GetFiles(tempDirectory.Path));
-        var content = await File.ReadAllTextAsync(filePath);
+        var content = await File.ReadAllTextAsync(filePath, TestContext.Current.CancellationToken);
 
         Assert.Contains("From: Sender <from@example.com>", content, StringComparison.Ordinal);
         Assert.Contains("To: Recipient <to@example.com>", content, StringComparison.Ordinal);
@@ -47,7 +47,7 @@ public class FileEmailTransportTests
 
         Assert.False(Directory.Exists(outputDirectory));
 
-        await sut.SendAsync(CreateMessage());
+        await sut.SendAsync(CreateMessage(), TestContext.Current.CancellationToken);
 
         Assert.True(Directory.Exists(outputDirectory));
         Assert.Single(Directory.GetFiles(outputDirectory));
@@ -59,9 +59,9 @@ public class FileEmailTransportTests
         using var tempDirectory = TemporaryDirectory.Create();
         var sut = CreateSut(tempDirectory.Path);
 
-        await sut.SendAsync(CreateMessage("first subject"));
-        await Task.Delay(2);
-        await sut.SendAsync(CreateMessage("second subject"));
+        await sut.SendAsync(CreateMessage("first subject"), TestContext.Current.CancellationToken);
+        await Task.Delay(2, TestContext.Current.CancellationToken);
+        await sut.SendAsync(CreateMessage("second subject"), TestContext.Current.CancellationToken);
 
         var files = Directory.GetFiles(tempDirectory.Path);
         Assert.Equal(2, files.Length);
@@ -78,7 +78,7 @@ public class FileEmailTransportTests
         using var tempDirectory = TemporaryDirectory.Create();
         var sut = CreateSut(tempDirectory.Path);
 
-        await Assert.ThrowsAsync<ArgumentNullException>(() => sut.SendAsync(null!));
+        await Assert.ThrowsAsync<ArgumentNullException>(() => sut.SendAsync(null!, TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -86,7 +86,7 @@ public class FileEmailTransportTests
     {
         var sut = CreateSut("\0invalid-path");
 
-        var ex = await Assert.ThrowsAnyAsync<Exception>(() => sut.SendAsync(CreateMessage()));
+        var ex = await Assert.ThrowsAnyAsync<Exception>(() => sut.SendAsync(CreateMessage(), TestContext.Current.CancellationToken));
         Assert.True(ex is ArgumentException or NotSupportedException);
     }
 
@@ -99,10 +99,10 @@ public class FileEmailTransportTests
         message.Attachments.Add(EmailAttachment.FromFile("invoice.pdf"));
         message.Attachments.Add(EmailAttachment.FromFile("terms.txt"));
 
-        await sut.SendAsync(message);
+        await sut.SendAsync(message, TestContext.Current.CancellationToken);
 
         var filePath = Assert.Single(Directory.GetFiles(tempDirectory.Path));
-        var content = await File.ReadAllTextAsync(filePath);
+        var content = await File.ReadAllTextAsync(filePath, TestContext.Current.CancellationToken);
 
         Assert.Contains("Attachments: invoice.pdf (application/pdf), terms.txt (text/plain)", content, StringComparison.Ordinal);
     }
@@ -113,10 +113,10 @@ public class FileEmailTransportTests
         using var tempDirectory = TemporaryDirectory.Create();
         var sut = CreateSut(tempDirectory.Path);
 
-        await sut.SendAsync(CreateMessage());
+        await sut.SendAsync(CreateMessage(), TestContext.Current.CancellationToken);
 
         var filePath = Assert.Single(Directory.GetFiles(tempDirectory.Path));
-        var content = await File.ReadAllTextAsync(filePath);
+        var content = await File.ReadAllTextAsync(filePath, TestContext.Current.CancellationToken);
 
         Assert.DoesNotContain("Attachments:", content, StringComparison.Ordinal);
     }
@@ -129,10 +129,10 @@ public class FileEmailTransportTests
         var message = CreateMessage();
         message.ReplyTo.Add(new EmailAddress("submitter@example.com", "Submitter"));
 
-        await sut.SendAsync(message);
+        await sut.SendAsync(message, TestContext.Current.CancellationToken);
 
         var filePath = Assert.Single(Directory.GetFiles(tempDirectory.Path));
-        var content = await File.ReadAllTextAsync(filePath);
+        var content = await File.ReadAllTextAsync(filePath, TestContext.Current.CancellationToken);
 
         Assert.Contains("Reply-To: Submitter <submitter@example.com>", content, StringComparison.Ordinal);
     }
@@ -143,10 +143,10 @@ public class FileEmailTransportTests
         using var tempDirectory = TemporaryDirectory.Create();
         var sut = CreateSut(tempDirectory.Path);
 
-        await sut.SendAsync(CreateMessage());
+        await sut.SendAsync(CreateMessage(), TestContext.Current.CancellationToken);
 
         var filePath = Assert.Single(Directory.GetFiles(tempDirectory.Path));
-        var content = await File.ReadAllTextAsync(filePath);
+        var content = await File.ReadAllTextAsync(filePath, TestContext.Current.CancellationToken);
 
         Assert.DoesNotContain("Reply-To:", content, StringComparison.Ordinal);
     }

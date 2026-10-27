@@ -80,7 +80,7 @@ public class KarlCliCommandTests
     {
         var tempDir = CreateTempDirectory();
         var markdownPath = Path.Combine(tempDir, "body.md");
-        await File.WriteAllTextAsync(markdownPath, "Body from markdown");
+        await File.WriteAllTextAsync(markdownPath, "Body from markdown", TestContext.Current.CancellationToken);
 
         var capture = new CaptureSink();
         var exitCode = await InvokeAsync(
@@ -111,7 +111,7 @@ public class KarlCliCommandTests
     {
         var tempDir = CreateTempDirectory();
         var markdownPath = Path.Combine(tempDir, "body.md");
-        await File.WriteAllTextAsync(markdownPath, "Markdown wins");
+        await File.WriteAllTextAsync(markdownPath, "Markdown wins", TestContext.Current.CancellationToken);
 
         try
         {
@@ -136,7 +136,7 @@ public class KarlCliCommandTests
     {
         var tempDir = CreateTempDirectory();
         var modelPath = Path.Combine(tempDir, "model.json");
-        await File.WriteAllTextAsync(modelPath, """{"name":"Chris"}""");
+        await File.WriteAllTextAsync(modelPath, """{"name":"Chris"}""", TestContext.Current.CancellationToken);
 
         try
         {
@@ -224,7 +224,7 @@ public class KarlCliCommandTests
         try
         {
             var jsonPath = Path.Combine(tempDir, "karl.json");
-            await File.WriteAllTextAsync(jsonPath, """{"Karl":{"Smtp":{"Host":"smtp.example.com"}}}""");
+            await File.WriteAllTextAsync(jsonPath, """{"Karl":{"Smtp":{"Host":"smtp.example.com"}}}""", TestContext.Current.CancellationToken);
 
             var capture = new CaptureSink();
             var exitCode = await InvokeAsync(
@@ -249,7 +249,7 @@ public class KarlCliCommandTests
         try
         {
             var jsonPath = Path.Combine(tempDir, "karl.json");
-            await File.WriteAllTextAsync(jsonPath, """{"Karl":{"Smtp":{"Host":"config.example.com"}}}""");
+            await File.WriteAllTextAsync(jsonPath, """{"Karl":{"Smtp":{"Host":"config.example.com"}}}""", TestContext.Current.CancellationToken);
 
             var capture = new CaptureSink();
             var exitCode = await InvokeAsync(
@@ -300,7 +300,7 @@ public class KarlCliCommandTests
         try
         {
             var jsonPath = Path.Combine(tempDir, "karl.json");
-            await File.WriteAllTextAsync(jsonPath, """{"Karl":{"Smtp":{"Port":2525}}}""");
+            await File.WriteAllTextAsync(jsonPath, """{"Karl":{"Smtp":{"Port":2525}}}""", TestContext.Current.CancellationToken);
 
             var capture = new CaptureSink();
             var exitCode = await InvokeAsync(
@@ -325,7 +325,7 @@ public class KarlCliCommandTests
         try
         {
             var jsonPath = Path.Combine(tempDir, "karl.json");
-            await File.WriteAllTextAsync(jsonPath, """{"Karl":{"Smtp":{"Username":"svc-mailer","Password":"s3cret"}}}""");
+            await File.WriteAllTextAsync(jsonPath, """{"Karl":{"Smtp":{"Username":"svc-mailer","Password":"s3cret"}}}""", TestContext.Current.CancellationToken);
 
             var capture = new CaptureSink();
             var exitCode = await InvokeAsync(
@@ -351,7 +351,7 @@ public class KarlCliCommandTests
         try
         {
             var jsonPath = Path.Combine(tempDir, "karl.json");
-            await File.WriteAllTextAsync(jsonPath, """{"Karl":{"Smtp":{"SecurityMode":"StartTlsWhenAvailable"}}}""");
+            await File.WriteAllTextAsync(jsonPath, """{"Karl":{"Smtp":{"SecurityMode":"StartTlsWhenAvailable"}}}""", TestContext.Current.CancellationToken);
 
             var capture = new CaptureSink();
             var exitCode = await InvokeAsync(
@@ -376,7 +376,7 @@ public class KarlCliCommandTests
         try
         {
             var jsonPath = Path.Combine(tempDir, "karl.json");
-            await File.WriteAllTextAsync(jsonPath, """{"Karl":{"Smtp":{"Port":2525}}}""");
+            await File.WriteAllTextAsync(jsonPath, """{"Karl":{"Smtp":{"Port":2525}}}""", TestContext.Current.CancellationToken);
 
             var capture = new CaptureSink();
             var exitCode = await InvokeAsync(
@@ -401,7 +401,7 @@ public class KarlCliCommandTests
         try
         {
             var jsonPath = Path.Combine(tempDir, "karl.json");
-            await File.WriteAllTextAsync(jsonPath, """{"Karl":{"File":{"FileNamePrefix":"outbound"}}}""");
+            await File.WriteAllTextAsync(jsonPath, """{"Karl":{"File":{"FileNamePrefix":"outbound"}}}""", TestContext.Current.CancellationToken);
 
             var capture = new CaptureSink();
             var exitCode = await InvokeAsync(
@@ -427,7 +427,7 @@ public class KarlCliCommandTests
         {
             var configuredDirectory = Path.Combine(tempDir, "configured-output");
             var jsonPath = Path.Combine(tempDir, "karl.json");
-            await File.WriteAllTextAsync(jsonPath, JsonSerializer.Serialize(new { Karl = new { File = new { DirectoryPath = configuredDirectory } } }));
+            await File.WriteAllTextAsync(jsonPath, JsonSerializer.Serialize(new { Karl = new { File = new { DirectoryPath = configuredDirectory } } }), TestContext.Current.CancellationToken);
 
             var capture = new CaptureSink();
             var exitCode = await InvokeAsync(
@@ -454,7 +454,7 @@ public class KarlCliCommandTests
             var configuredDirectory = Path.Combine(tempDir, "configured-output");
             var cliDirectory = Path.Combine(tempDir, "cli-output");
             var jsonPath = Path.Combine(tempDir, "karl.json");
-            await File.WriteAllTextAsync(jsonPath, JsonSerializer.Serialize(new { Karl = new { File = new { DirectoryPath = configuredDirectory } } }));
+            await File.WriteAllTextAsync(jsonPath, JsonSerializer.Serialize(new { Karl = new { File = new { DirectoryPath = configuredDirectory } } }), TestContext.Current.CancellationToken);
 
             var capture = new CaptureSink();
             var exitCode = await InvokeAsync(
@@ -525,7 +525,7 @@ public class KarlCliCommandTests
         try
         {
             var csvPath = Path.Combine(tempDir, "contacts.csv");
-            await File.WriteAllTextAsync(csvPath, "Email,FirstName\r\nalice@example.com,Alice\r\nbob@example.com,Bob\r\n");
+            await File.WriteAllTextAsync(csvPath, "Email,FirstName\r\nalice@example.com,Alice\r\nbob@example.com,Bob\r\n", TestContext.Current.CancellationToken);
 
             var capture = new CaptureSink();
             var exitCode = await InvokeAsync(
@@ -553,7 +553,7 @@ public class KarlCliCommandTests
         try
         {
             var csvPath = Path.Combine(tempDir, "contacts.csv");
-            await File.WriteAllTextAsync(csvPath, "Email,FirstName\r\nalice@example.com,Alice\r\n");
+            await File.WriteAllTextAsync(csvPath, "Email,FirstName\r\nalice@example.com,Alice\r\n", TestContext.Current.CancellationToken);
 
             var output = new StringWriter();
             var exitCode = await InvokeAsync(
@@ -577,7 +577,7 @@ public class KarlCliCommandTests
         try
         {
             var csvPath = Path.Combine(tempDir, "contacts.csv");
-            await File.WriteAllTextAsync(csvPath, "Email,FirstName\r\n");
+            await File.WriteAllTextAsync(csvPath, "Email,FirstName\r\n", TestContext.Current.CancellationToken);
 
             var output = new StringWriter();
             var exitCode = await InvokeAsync(
@@ -601,7 +601,7 @@ public class KarlCliCommandTests
         try
         {
             var csvPath = Path.Combine(tempDir, "contacts.csv");
-            await File.WriteAllTextAsync(csvPath, "Email,FirstName\r\nalice@example.com,Alice\r\n,Bob\r\n");
+            await File.WriteAllTextAsync(csvPath, "Email,FirstName\r\nalice@example.com,Alice\r\n,Bob\r\n", TestContext.Current.CancellationToken);
 
             var capture = new CaptureSink();
             var output = new StringWriter();
@@ -628,9 +628,9 @@ public class KarlCliCommandTests
         try
         {
             var csvPath = Path.Combine(tempDir, "contacts.csv");
-            await File.WriteAllTextAsync(csvPath, "Email\r\nalice@example.com\r\n");
+            await File.WriteAllTextAsync(csvPath, "Email\r\nalice@example.com\r\n", TestContext.Current.CancellationToken);
             var modelPath = Path.Combine(tempDir, "model.json");
-            await File.WriteAllTextAsync(modelPath, "{}");
+            await File.WriteAllTextAsync(modelPath, "{}", TestContext.Current.CancellationToken);
 
             var output = new StringWriter();
             var exitCode = await InvokeAsync(
@@ -654,7 +654,7 @@ public class KarlCliCommandTests
         try
         {
             var csvPath = Path.Combine(tempDir, "contacts.csv");
-            await File.WriteAllTextAsync(csvPath, "Email\r\nalice@example.com\r\n");
+            await File.WriteAllTextAsync(csvPath, "Email\r\nalice@example.com\r\n", TestContext.Current.CancellationToken);
 
             var output = new StringWriter();
             var exitCode = await InvokeAsync(
@@ -678,7 +678,7 @@ public class KarlCliCommandTests
         try
         {
             var csvPath = Path.Combine(tempDir, "contacts.csv");
-            await File.WriteAllTextAsync(csvPath, "Email,FirstName\r\nalice@example.com,Alice\r\nbob@example.com,Bob\r\n");
+            await File.WriteAllTextAsync(csvPath, "Email,FirstName\r\nalice@example.com,Alice\r\nbob@example.com,Bob\r\n", TestContext.Current.CancellationToken);
             var outputDir = Path.Combine(tempDir, "out");
 
             var exitCode = await InvokeAsync(
@@ -702,7 +702,7 @@ public class KarlCliCommandTests
         try
         {
             var csvPath = Path.Combine(tempDir, "contacts.csv");
-            await File.WriteAllTextAsync(csvPath, "Email,FirstName\r\nalice@example.com,Alice\r\nbob@example.com,Bob\r\ncarol@example.com,Carol\r\n");
+            await File.WriteAllTextAsync(csvPath, "Email,FirstName\r\nalice@example.com,Alice\r\nbob@example.com,Bob\r\ncarol@example.com,Carol\r\n", TestContext.Current.CancellationToken);
 
             var capture = new CaptureSink { FailOnToAddress = "bob@example.com" };
             var output = new StringWriter();
@@ -729,7 +729,7 @@ public class KarlCliCommandTests
         try
         {
             var attachPath = Path.Combine(tempDir, "invoice.pdf");
-            await File.WriteAllTextAsync(attachPath, "invoice content");
+            await File.WriteAllTextAsync(attachPath, "invoice content", TestContext.Current.CancellationToken);
 
             var capture = new CaptureSink();
             var exitCode = await InvokeAsync(
@@ -757,8 +757,8 @@ public class KarlCliCommandTests
         {
             var firstPath = Path.Combine(tempDir, "invoice.pdf");
             var secondPath = Path.Combine(tempDir, "terms.txt");
-            await File.WriteAllTextAsync(firstPath, "invoice content");
-            await File.WriteAllTextAsync(secondPath, "terms content");
+            await File.WriteAllTextAsync(firstPath, "invoice content", TestContext.Current.CancellationToken);
+            await File.WriteAllTextAsync(secondPath, "terms content", TestContext.Current.CancellationToken);
 
             var capture = new CaptureSink();
             var exitCode = await InvokeAsync(
@@ -809,9 +809,9 @@ public class KarlCliCommandTests
         try
         {
             var csvPath = Path.Combine(tempDir, "contacts.csv");
-            await File.WriteAllTextAsync(csvPath, "Email,FirstName\r\nalice@example.com,Alice\r\nbob@example.com,Bob\r\n");
+            await File.WriteAllTextAsync(csvPath, "Email,FirstName\r\nalice@example.com,Alice\r\nbob@example.com,Bob\r\n", TestContext.Current.CancellationToken);
             var attachPath = Path.Combine(tempDir, "welcome-packet.pdf");
-            await File.WriteAllTextAsync(attachPath, "packet content");
+            await File.WriteAllTextAsync(attachPath, "packet content", TestContext.Current.CancellationToken);
 
             var capture = new CaptureSink();
             var exitCode = await InvokeAsync(

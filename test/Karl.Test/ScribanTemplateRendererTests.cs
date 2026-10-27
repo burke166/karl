@@ -15,7 +15,7 @@ public class ScribanTemplateRendererTests
             Company = "Acme"
         };
 
-        var result = await sut.RenderAsync(template, model);
+        var result = await sut.RenderAsync(template, model, TestContext.Current.CancellationToken);
 
         Assert.Contains("Hello", result.Html);
         Assert.Contains("Karl", result.Html);

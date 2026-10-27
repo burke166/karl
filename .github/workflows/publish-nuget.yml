@@ -10,6 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      id-token: write # Required for NuGet.org trusted publishing (OIDC).
     steps:
       - uses: actions/checkout@v4
 
@@ -35,12 +36,20 @@ jobs:
           dotnet pack Karl.sln
           --configuration Release --no-build --output artifacts/nupkgs
 
+      # Trusted publishing: exchanges this run's GitHub OIDC token for a short-lived
+      # NuGet.org API key, so no long-lived key is stored in repository secrets.
+      - name: NuGet login
+        id: nuget-login
+        uses: NuGet/login@v1
+        with:
+          user: codeblue
+
       # NuGet.org auto-pushes the matching .snupkg alongside its .nupkg, so a separate
       # symbol push step isn't needed here - same behavior relied on for ComputerCodeBlue.Csv.
       - name: Push packages to NuGet.org
         run: >
           dotnet nuget push "artifacts/nupkgs/*.nupkg"
-          --api-key ${{ secrets.NUGET_API_KEY }}
+          --api-key ${{ steps.nuget-login.outputs.NUGET_API_KEY }}
           --source https://api.nuget.org/v3/index.json
           --skip-duplicate
 
